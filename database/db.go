@@ -126,7 +126,7 @@ var (
 	DBConFile = ".db.ini"
 )
 
-func QueryInstancesFromDB(db *sql.DB, project string) {
+func QueryInstancesFromDB(db *sql.DB, project string) []map[string]string {
 	sql := fmt.Sprintf("select instance_name,public_ip from %s where project='%s'", InstanceTableName, project)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -134,14 +134,18 @@ func QueryInstancesFromDB(db *sql.DB, project string) {
 	}
 	defer rows.Close()
 
-	fmt.Printf("%s server list: \n\n", project)
+	// fmt.Printf("%s server list: \n\n", project)
+	instances := []map[string]string{}
 	for rows.Next() {
-		var instanceName string
-		var publicIP string
+		a := map[string]string{}
+		var instanceName, publicIP string
 		rows.Scan(&instanceName, &publicIP)
-		fmt.Println(instanceName, publicIP)
-
+		a["Name"] = instanceName
+		a["PublicIP"] = publicIP
+		instances = append(instances, a)
+		// fmt.Println(instanceName, publicIP)
 	}
+	return instances
 }
 
 // only support to query single keyword in sql, like "select jmphost from jumperHosts"

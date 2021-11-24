@@ -213,7 +213,9 @@ func GetAWSInstances(project, region string) ([]map[string]string, error) {
 			result = append(result, tagIP)
 		}
 	}
-	// fmt.Println(result)
+	if len(result) == 0 {
+		return nil, fmt.Errorf("there's no instance found in %s for %s", awsRegions[region], project)
+	}
 	return result, nil
 }
 

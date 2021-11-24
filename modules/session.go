@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"sshtunnel/cipherText"
 	"sshtunnel/database"
+	"strings"
 	"syscall"
 	"time"
 
@@ -85,7 +86,11 @@ func InitSession(print, fcopy bool, proj, rmtHost, rmtPort, rmtUser, rmtPass str
 	defer db.Close()
 
 	if proj != "" && print {
-		database.QueryInstancesFromDB(db, proj)
+		result := database.QueryInstancesFromDB(db, proj)
+		fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
+		for _, i := range result {
+			fmt.Printf("%-50s -- %s\n", i["Name"], i["PublicIP"])
+		}
 		fmt.Println()
 		return
 	}
