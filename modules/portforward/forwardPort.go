@@ -1,64 +1,31 @@
 package portforward
 
 import (
-	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"path"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	remoteAddr string
-	remotePort string
-	localAddr  string
-	jumperHost string
-
-	sshUser string
-	sshPass string
-	sshPort string
-)
-
-func init() {
-	flag.StringVar(&localAddr, "lAddr", "127.0.0.1:7000", "local listening address for ssh connection")
-	flag.StringVar(&remoteAddr, "rAddr", "", "remote server ip for ssh connection")
-	flag.StringVar(&remotePort, "rport", "", "port for remote host ssh connection")
-	flag.StringVar(&jumperHost, "jHost", "52.83.235.118", "jumper host for ssh connection")
-	flag.StringVar(&sshUser, "jUser", "ec2-user", "user for ssh connection")
-	flag.StringVar(&sshPass, "sshPass", "", "password for jumper host ssh connection")
-	flag.StringVar(&sshPort, "sshPort", "26222", "port for jump host ssh connection")
-	flag.Parse()
-}
-
 // PortForward .
-func PortForward() {
-	// Connection settings
-	if remoteAddr == "" || sshPass == "" {
-		log.Fatal("error occured, lack remoteAddr or sshPass")
-	}
+func PortForward(jumpUser, jumpPass, jumpPort, jumperHost, localAddr, rmtAddr, rmtPort string) {
 	// Build SSH client configuration
-	cfg, err := makeSSHConfig(sshUser, sshPass)
+	cfg, err := makeSSHConfig(jumpUser, jumpPass)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// Establish connection with SSH server
-	conn, err := ssh.Dial("tcp", net.JoinHostPort(jumperHost, sshPort), cfg)
+	conn, err := ssh.Dial("tcp", net.JoinHostPort(jumperHost, jumpPort), cfg)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer conn.Close()
-
-	// Establish connection with remote server
-	// remote, err := conn.Dial("tcp", remoteAddr)
-	// if err != nil {
-	// 	log.Fatalf("connect remote %s failed with err: %s .", remoteAddr, err)
-	// }
 
 	// Start local server to forward traffic to remote connection
 	local, err := net.Listen("tcp", localAddr)
@@ -70,9 +37,9 @@ func PortForward() {
 
 	// Handle incoming connections
 	for {
-		remote, err := conn.Dial("tcp", net.JoinHostPort(remoteAddr, remotePort))
+		remote, err := conn.Dial("tcp", net.JoinHostPort(rmtAddr, rmtPort))
 		if err != nil {
-			log.Fatalf("connect remote %s failed with err: %s .", net.JoinHostPort(remoteAddr, remotePort), err)
+			log.Fatalf("connect remote %s failed with err: %s .", net.JoinHostPort(rmtAddr, rmtPort), err)
 		}
 
 		client, err := local.Accept()
@@ -84,32 +51,30 @@ func PortForward() {
 	}
 }
 
-// Get default location of a private key
-func privateKeyPath() string {
-	return os.Getenv("HOME") + "/.ssh/id_rsa"
-}
-
-// Get private key for ssh authentication
-func parsePrivateKey(keyPath string) (ssh.Signer, error) {
-	buff, _ := ioutil.ReadFile(keyPath)
-	return ssh.ParsePrivateKey(buff)
-}
-
 // Get ssh client config for our connection
 // SSH config will use 2 authentication strategies: by key and by password
 func makeSSHConfig(user, password string) (*ssh.ClientConfig, error) {
-	key, err := parsePrivateKey(privateKeyPath())
-	if err != nil {
-		// fmt.Println(err)
-		return nil, err
+	var Auth []ssh.AuthMethod
+
+	if password == "" {
+
+		buf, err := os.ReadFile(path.Join(os.Getenv("HOME") + ".ssh/id_rsa"))
+		if err != nil {
+			return nil, err
+		}
+		key, err := ssh.ParsePrivateKey(buf)
+		if err != nil {
+			// fmt.Println(err)
+			return nil, err
+		}
+		Auth = append(Auth, ssh.PublicKeys(key))
+	} else {
+		Auth = append(Auth, ssh.Password(password))
 	}
 
 	config := ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(key),
-			ssh.Password(password),
-		},
+		User:            user,
+		Auth:            Auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 

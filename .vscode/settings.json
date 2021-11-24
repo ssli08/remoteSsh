@@ -5,6 +5,19 @@
             "driver": "SQLite",
             "name": "Local SQLite3",
             "database": "/opt/sqlite3/logserver.db"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "mysql",
+            "database": "sshServers",
+            "username": "ssh",
+            "password": "ssh@gs.com"
         }
     ]
 }

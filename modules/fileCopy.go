@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -59,7 +60,8 @@ func localCopy(conn *ssh.Client, jmpHost string, filePath []string) {
 
 	if len(filePath) > 0 {
 		for _, file := range filePath {
-			log.Printf("start copying file %s to %s", file, conn.RemoteAddr())
+			// log.Printf("start copying file %s to %s", file, conn.RemoteAddr())
+			fmt.Printf("start copying file %s to %s\n", file, conn.RemoteAddr())
 			wg.Add(1)
 			go writeRemoteFile(file, jmpHost, sftpClient, conn.RemoteAddr(), &wg)
 		}
@@ -95,7 +97,8 @@ func writeRemoteFile(filePath, jmpHost string, sftpClient *sftp.Client, raddr ne
 		log.Fatal("read error ", err)
 	}
 	// check time spending during file transportation
-	duration := time.Now().Sub(st)
+	// duration := time.Now().Sub(st)
+	duration := time.Since(st)
 	// buf, err := ioutil.ReadFile(filePath)
 	// if err != nil {
 	// 	log.Fatalf("read file error %s", err)
@@ -104,6 +107,5 @@ func writeRemoteFile(filePath, jmpHost string, sftpClient *sftp.Client, raddr ne
 	// 	log.Fatal(err)
 	// }
 	md5 := MD5Sum(filePath)
-	log.Printf("Copy %s [MD5: %x ] to %s successfully in %s.", fileName, md5, jmpHost, duration)
-
+	fmt.Printf("Copy [File: %s, MD5: %x ] to %s successfully in %s.\n", fileName, md5, jmpHost, duration)
 }

@@ -16,15 +16,21 @@ For full license details see <http://www.gnu.org/licenses/>.
 package networkdetect
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"net"
+	"os"
+	"sshtunnel/database"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 )
 
 var (
@@ -93,8 +99,9 @@ func LatencyTest(remoteAddr string, port uint16) time.Duration {
 	ifname := chooseInterface()
 	laddr := interfaceAddress(ifname)
 	lt := latencyRun(strings.Split(laddr.String(), "/")[0], remoteAddr, port)
+	// fmt.Println(laddr)
 	log.Println("Measuring round-trip latency from", laddr, "to", remoteAddr, "on port", port)
-	log.Printf("Latency: %v\n", lt)
+	log.Printf("TCP Latency: %v\n", lt)
 	return lt
 }
 
@@ -120,7 +127,7 @@ func latencyRun(localAddr string, remoteHost string, port uint16) time.Duration 
 		wg.Done()
 	}()
 
-	time.Sleep(1 * time.Millisecond)
+	// time.Sleep(1 * time.Millisecond)
 	sendTime := sendSyn(localAddr, remoteAddr, port)
 
 	wg.Wait()
@@ -242,13 +249,20 @@ func receiveSynAck(localAddress, remoteAddress string) time.Time {
 	if err != nil {
 		log.Fatalf("ListenIP: %s\n", err)
 	}
+	// fmt.Println("listen: ", netaddr)
 	var receiveTime time.Time
+	count := 1
 	for {
+		if count >= 10 {
+			log.Println("latency Test reached max retry times, return ", receiveTime)
+			return receiveTime
+		}
 		buf := make([]byte, 1024)
 		numRead, raddr, err := conn.ReadFrom(buf)
 		if err != nil {
 			log.Fatalf("ReadFrom: %s\n", err)
 		}
+		// fmt.Println(111)
 		if raddr.String() != remoteAddress {
 			// this is not the packet we are looking for
 			continue
@@ -260,6 +274,94 @@ func receiveSynAck(localAddress, remoteAddress string) time.Time {
 		if tcp.HasFlag(RST) || (tcp.HasFlag(SYN) && tcp.HasFlag(ACK)) {
 			break
 		}
+		// fmt.Println("sleep 1s")
+		time.Sleep(1 * time.Second)
+		count++
 	}
+	// fmt.Println("end: ", time.Since(a))
 	return receiveTime
+}
+
+func ICMPPingLatency(raddr string) (time.Duration, error) {
+	var buf [1500]byte
+	ip := interfaceAddress(chooseInterface())
+	if a := net.ParseIP(raddr); a == nil {
+		// return 0, fmt.Errorf("%s not valid ip address, exit", raddr)
+		if addrs, err := net.LookupHost(raddr); err != nil {
+			return 0, fmt.Errorf("lookup %s failed with error %s", raddr, err)
+		} else {
+			raddr = addrs[0]
+		}
+	}
+	conn, err := icmp.ListenPacket("udp4", strings.Split(ip.String(), "/")[0])
+	if err != nil {
+		return 0, err
+	}
+	if err := conn.SetDeadline(time.Now().Add(1 * time.Second)); err != nil {
+		return 0, fmt.Errorf("icmp ping %s failed with error %s", raddr, err)
+	}
+	defer conn.Close()
+
+	m := icmp.Message{Type: ipv4.ICMPTypeEcho, Body: &icmp.Echo{ID: os.Geteuid(), Seq: 0x0001, Data: []byte("")}}
+	mb, err := m.Marshal(nil)
+	if err != nil {
+		return 0, err
+	}
+	now := time.Now()
+	if _, err := conn.WriteTo(mb, &net.UDPAddr{IP: net.ParseIP(raddr)}); err != nil {
+		return 0, err
+	}
+
+	n, addr, err := conn.ReadFrom(buf[:])
+	if err != nil {
+		return 0, err
+	}
+	// log.Println("got response from ", addr.String())
+
+	rm, err := icmp.ParseMessage(1, buf[:n])
+	if err != nil {
+		return 0, err
+	}
+
+	switch rm.Type {
+	case ipv4.ICMPTypeEchoReply:
+		log.Println("got response from remote addr ", addr.String())
+	default:
+		log.Printf("%v want echo reply", rm)
+
+	}
+	duration := time.Since(now)
+	log.Println("ICMP Latency ", duration)
+	return duration, nil
+}
+
+func UpdateJumperHostLatency(db *sql.DB, port uint16) {
+	// INSERT INTO forgot (resetkey, expires) VALUES (whatever, NOW() + INTERVAL 48 HOUR)
+	// DELETE FROM forgot WHERE expires < NOW()
+	var wg sync.WaitGroup
+	sql := "select jmphost from jumperHosts"
+	result := database.QueryKeywordFromDB(db, sql)
+	for _, jmphost := range result {
+		wg.Add(1)
+		go func(jmphost string) {
+			defer wg.Done()
+			tcpLatency := LatencyTest(jmphost, port)
+			icmpLatency, err := ICMPPingLatency(jmphost)
+			if err != nil {
+				log.Println(err)
+			}
+
+			var latency time.Duration
+			if time.Duration(icmpLatency.Milliseconds()) < time.Duration(tcpLatency.Milliseconds()) {
+				latency = icmpLatency
+			} else {
+				latency = tcpLatency
+			}
+			sql := fmt.Sprintf("update jumperHosts set latency='%s' where jmphost='%s'", latency, jmphost)
+			if err := database.DBExecute(db, sql); err != nil {
+				log.Fatal(err)
+			}
+		}(jmphost)
+	}
+	wg.Wait()
 }

@@ -5,15 +5,25 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sshtunnel/database"
+	"strings"
 
 	"github.com/extrame/xls"
 	"github.com/tealeg/xlsx"
 )
 
+// var sql = "INSERT INTO instances (instance_name,public_ip,private_ip,region,project) values ('%s','%s','%s','%s','%s')"
+
 func ReadCSV(csvFile string) ([][]string, error) {
+	db, err := database.GetDBConnInfo(database.DatabaseName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	f, err := os.Open(csvFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read %s with error %s only support CSV suffix file", csvFile, err)
 	}
 	defer f.Close()
 
@@ -26,7 +36,19 @@ func ReadCSV(csvFile string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// fmt.Println(records)
+	for _, data := range records {
+		if strings.Contains(data[1], "instance_name") {
+			continue
+		}
+		sql := fmt.Sprintf(`INSERT INTO %s 
+				(id,instance_name,public_ip,private_ip,region,project,insert_time,role) 
+				values 
+				('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])
+		if err := database.DBExecute(db, sql); err != nil {
+			log.Fatal(err)
+		}
+	}
 	return records, nil
 }
 func WriteCSV(csvFile string, records [][]string) error {
@@ -65,16 +87,22 @@ func WriteCSV(csvFile string, records [][]string) error {
 	return nil
 }
 func ReadXLSX(xlsxFile string) error {
+	db, err := database.GetDBConnInfo(database.DatabaseName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	x, err := xlsx.OpenFile(xlsxFile)
 	if err != nil {
 		return err
 	}
-	log.Printf("parsing XLS file %s, with sheets Num. %d", xlsxFile, len(x.Sheets))
+	log.Printf("parsing XLSX file %s, with sheets Num. %d", xlsxFile, len(x.Sheets))
 	res := [][]string{}
 
 	for index, sheet := range x.Sheets {
 		if index == 0 {
-			fmt.Println(sheet.Name)
+			fmt.Println("sheet name: ", sheet.Name)
 			temp := make([][]string, len(sheet.Rows))
 			for k, row := range sheet.Rows {
 				data := []string{}
@@ -82,21 +110,41 @@ func ReadXLSX(xlsxFile string) error {
 					data = append(data, cell.Value)
 				}
 				temp[k] = data
+				if strings.Contains(data[1], "instance_name") {
+					continue
+				}
+				// sql := fmt.Sprintf(`INSERT INTO %s
+				// (instance_name,public_ip,private_ip,region,project)
+				// values
+				// ('%s','%s','%s','%s','%s')`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4])
+
+				sql := fmt.Sprintf(`INSERT INTO %s 
+				(id,instance_name,public_ip,private_ip,region,project,insert_time,role) 
+				values 
+				('%s','%s','%s','%s','%s','%s','%s',"%s")`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4], data[5], data[6], "data[7]")
+				if err := database.DBExecute(db, sql); err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			res = append(res, temp...)
+
 		}
 	}
-	fmt.Println(res)
+	log.Println(res)
 	return nil
 }
 
 func ReadXLS(xlsFile, charset string) error {
-
+	db, err := database.GetDBConnInfo(database.DatabaseName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 	// var res = [][]string{}
 	wb, err := xls.Open(xlsFile, charset)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read %s with error %s only xls suffix file can be processed", xlsFile, err)
 	}
 	log.Printf("parsing XLS file %s, author: %s", xlsFile, wb.Author)
 
@@ -109,7 +157,8 @@ func ReadXLS(xlsFile, charset string) error {
 			log.Printf("Total Rows %d need to read in WorkSheet %s\n", sheet.MaxRow, sheet.Name)
 			if sheet.MaxRow != 0 {
 				// sheet1 := make([][]string, sheet.MaxRow)
-				for r := 0; r < (int(sheet.MaxRow)); r++ {
+				// sheet.MaxRow less than the really rows in worksheet, so plus 1 (int(sheet_MaxRow) + 1)
+				for r := 0; r < (int(sheet.MaxRow) + 1); r++ {
 					row := sheet.Row(r)
 					// data := make([]string, 0)
 					data := []string{}
@@ -118,10 +167,23 @@ func ReadXLS(xlsFile, charset string) error {
 						for c := 0; c < row.LastCol(); c++ {
 							col := row.Col(c)
 							data = append(data, col)
-							// write to db here
 						}
 						// sheet1[r] = data
-						fmt.Printf("read line:%d data %s\n", r, data)
+						// fmt.Printf("read line:%d data %s\n", r, data)
+						if strings.Contains(data[1], "instance_name") {
+							continue
+						}
+						// sql := fmt.Sprintf(`INSERT INTO %s
+						// (instance_name,public_ip,private_ip,region,project)
+						// values
+						// ('%s','%s','%s','%s','%s')`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4])
+						sql := fmt.Sprintf(`INSERT INTO %s (
+							id,instance_name,public_ip,private_ip,region,project,insert_time,role) 
+							values 
+							('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4], data[5], data[6], "data[7]")
+						if err := database.DBExecute(db, sql); err != nil {
+							log.Fatal(err)
+						}
 					}
 
 				}

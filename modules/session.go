@@ -1,20 +1,22 @@
 package modules
 
 import (
-	"flag"
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"sshtunnel/cipherText"
 	"sshtunnel/database"
 	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	// "golang.org/x/crypto/ssh/terminal" deprecated
 	"golang.org/x/net/proxy"
+	terminal "golang.org/x/term"
 )
 
 // AgentInterface ..
@@ -67,117 +69,57 @@ type Connect struct {
 }
 
 const (
-	// jmpHost = "13.115.186.176"
-	jmpUser = "ec2-user"
-	// jmpPass = "ec2@gs.com"
-	jmpPort = "26222"
-	proto   = "tcp"
+	Passcode = "passcode" // used to encrypt/decrypt password or private key
 )
-
-var (
-	// terminalModes = ssh.TerminalModes{
-	// 	ssh.ECHO: 1, // 0 disable echoing, 1 enable echoing
-	// 	// ssh.ECHOCTL:       0,
-	// 	ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-	// 	ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
-	// }
-	// jmpHost string
-	// jmpUser string
-	// jmpPass string
-	// jmpPort string
-	jph     bool
-	rmtHost string
-	rmtUser string
-	rmtPass string
-	rmtPort string
-
-	proj string
-	// proto string
-
-	print bool
-
-	fcopy bool //file copy
-)
-
-/* func init() {
-
-	flag.StringVar(&proj, "p", "", "project server to connect and show server list, options: gwn|gdms|ipvt")
-
-	// flag.StringVar(&jmpHost, "jh", "52.83.235.118", "jumper host|13.115.186.176")
-	// flag.StringVar(&jmpUser, "ju", "ec2-user", "jumper host user for ssh connection")
-	// flag.StringVar(&jmpPass, "jp", "ec2gs.com", "jumper host password for ssh connection")
-	// flag.StringVar(&jmpPort, "jport", "26222", "jumper ssh port for connection")
-	flag.BoolVar(&jph, "jp", false, "if true login through `jp`, else trough bj")
-	flag.StringVar(&rmtHost, "rh", "", "remote host")
-	flag.StringVar(&rmtUser, "ru", "ec2-user", "remote user")
-	flag.StringVar(&rmtPass, "rp", "", "remote password")
-	flag.StringVar(&rmtPort, "rport", "26222", "remote server ssh port for connection")
-
-	// flag.StringVar(&proto, "prtc", "tcp", "default connect protocol")
-
-	// flag.StringVar(&filename, "file", "", "filename to copy")
-	flag.BoolVar(&fcopy, "f", false, "file copy")
-
-	flag.BoolVar(&print, "print", false, "print server list in conrresponding project")
-
-	flag.Parse()
-} */
-func init() {
-	flag.StringVar(&proj, "p", "gdms", "project server to connect and show server list")
-	flag.BoolVar(&jph, "jp", false, "if true login through `jp`, else trough bj")
-	flag.StringVar(&rmtHost, "rh", "34.217.185.246", "remote host")
-	flag.StringVar(&rmtUser, "ru", "yxxu", "remote user")
-	flag.StringVar(&rmtPass, "rp", "yxxu@gs.com", "remote password")
-	flag.StringVar(&rmtPort, "rport", "26222", "remote server ssh port for connection")
-	flag.BoolVar(&fcopy, "f", false, "file copy")
-
-	flag.BoolVar(&print, "print", false, "print server list in conrresponding project")
-
-	flag.Parse()
-}
 
 // InitSession session
-func InitSession() {
-	// if jmpPass == "" { //|| rmtHost == ""  || rmtPass == "" {
-	// projct := []string{"gwn", "gdms", "ipvt"}
-	// cmd := fmt.Sprintf("select instance_name,public_ip from myproject where project=%s", proj)
-	// out := exec.Command(cmd)
+func InitSession(print, fcopy bool, proj, rmtHost, rmtPort, rmtUser, rmtPass string, fileList []string) {
 
 	// Ctrl^C  handling in ssh session
 	// https://unix.stackexchange.com/questions/102061/ctrl-c-handling-in-ssh-session
 
-	var (
-		jmpHost string
-		jmpPass string
-	)
-
-	if jph {
-		jmpHost = "13.115.186.176"
-		jmpPass = "ec2@gs.com"
-	} else {
-		jmpHost = "52.83.235.118"
-		jmpPass = "4475@gs.com"
+	db, err := database.GetDBConnInfo(database.DatabaseName)
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer db.Close()
 
 	if proj != "" && print {
-		database.QueryDB(proj)
+		database.QueryInstancesFromDB(db, proj)
 		fmt.Println()
 		return
 	}
-
+	res := ChooseJumperHost(db)
+	pass, err := cipherText.DecryptData(res.JmpPass, Passcode)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if rmtHost != "" {
 		if proj != "" {
-			makeProxyHost(jmpHost, jmpPass)
+			makeProxyHost(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, proj, fcopy, fileList)
 		} else {
-			fmt.Println(fmt.Errorf("lack of `-project` parameter, will connect to Jump server directly"))
+			fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", res.JmpHost)
+			makeDirectSSH(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, proj, fcopy, fileList)
 		}
 	} else {
-		fmt.Println(fmt.Errorf("No `rmtHost` parameter specified, connect to Jump server directly"))
-		makeDirectSSH(jmpHost, jmpPass)
+		fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
+		makeDirectSSH(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, proj, fcopy, fileList)
 	}
 
 	// network connection quality check
 	// networkdetect.LatencyTest("52.83.235.118", 26222)
+}
+
+func ChooseJumperHost(db *sql.DB) database.QueryJumperHosts {
+	sql := "select jmphost from jumperHosts where latency=(select MIN(latency) from jumperHosts)"
+	minLatencyJmpHosts := database.QueryKeywordFromDB(db, sql)
+	if len(minLatencyJmpHosts) == 0 {
+		log.Fatal("not JumperHost found in db")
+	}
+	log.Println("min latency jump host", minLatencyJmpHosts)
+	res := database.GetJumperHostsInfo(db, minLatencyJmpHosts[0])
+
+	return res
 }
 
 func linuxShell(session *ssh.Session) {
@@ -214,11 +156,11 @@ func linuxShell(session *ssh.Session) {
 		log.Fatalf("return error: %s", err)
 	}
 }
-func makeDirectSSH(jmpHost, jmpPass string) {
+func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, fileList []string) {
 	// make client
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
-	sshConfig := makeClientConfig(jmpUser, jmpPass, 20)
-	client, err := ssh.Dial(proto, jumpHost, &sshConfig)
+	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, proj, 20)
+	client, err := ssh.Dial("tcp", jumpHost, &sshConfig)
 
 	if err != nil {
 		log.Fatalf("dial %s failed with error %s", jmpHost, err.Error())
@@ -236,16 +178,15 @@ func makeDirectSSH(jmpHost, jmpPass string) {
 
 		linuxShell(session)
 	} else {
-
-		localCopy(client, jmpHost, flag.Args())
+		localCopy(client, jmpHost, fileList)
 	}
 }
 
-func makeProxyHost(jmpHost, jmpPass string) {
+func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, proj string, fcopy bool, fileList []string) {
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 
 	proxyConn := Connect{}
-	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass)
+	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, proj)
 	if err != nil {
 		log.Fatal("jumper host connect failed with error: ", err)
 	}
@@ -256,7 +197,7 @@ func makeProxyHost(jmpHost, jmpPass string) {
 
 	remoteHost := net.JoinHostPort(rmtHost, rmtPort)
 
-	err = targetConn.createClient(remoteHost, rmtUser, rmtPass)
+	err = targetConn.createClient(remoteHost, rmtUser, rmtPass, proj)
 	if err != nil {
 		log.Fatal("remote host connect failed with error: ", err)
 	}
@@ -272,12 +213,12 @@ func makeProxyHost(jmpHost, jmpPass string) {
 		// linuxShell(session)
 	} else {
 		// localCopy(targetConn.Client, filename)
-		localCopy(targetConn.Client, jmpHost, flag.Args())
+		localCopy(targetConn.Client, jmpHost, fileList)
 	}
 
 }
 
-func (c *Connect) createClient(host, user, password string) (err error) {
+func (c *Connect) createClient(host, user, password, proj string) (err error) {
 
 	// Create new ssh.ClientConfig{}
 
@@ -286,7 +227,7 @@ func (c *Connect) createClient(host, user, password string) (err error) {
 		timeout = c.ConnectTimeout
 	}
 
-	config := makeClientConfig(user, password, timeout)
+	config := InitSSHClientConfig(user, password, proj, timeout)
 
 	// check Dialer
 	if c.ProxyDialer == nil {
@@ -296,13 +237,13 @@ func (c *Connect) createClient(host, user, password string) (err error) {
 	// Dial to host:port
 	netConn, err := c.ProxyDialer.Dial("tcp", host)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Create new ssh connect
 	sshCon, channel, req, err := ssh.NewClientConn(netConn, host, &config)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Create *ssh.Client

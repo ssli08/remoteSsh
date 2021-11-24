@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -24,29 +25,30 @@ func createSHA256Hash(key string) []byte {
 	hasher := sha256.Sum256([]byte(key))
 	return hasher[:]
 }
-func EncryptData(data []byte, passphrase string) ([]byte, error) {
+func EncryptData(data []byte, passphrase string) (string, error) {
 	// key := createHash(passphrase)
 	key := createSHA256Hash(passphrase)
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
-		// panic(err.Error())
+		return "", err
 	}
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		// log.Fatal(err)
-		// panic(err.Error())
-		return nil, err
+		return "", err
 	}
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	return ciphertext, nil
+	ct := base64.StdEncoding.EncodeToString(ciphertext) // base64 encode
+	// ct := base64.RawStdEncoding.EncodeToString(ciphertext)
+	return ct, nil
 }
 
-func DecryptData(data []byte, passphrase string) ([]byte, error) {
+// may be got this error `illegal base64 data at input byte 32` because of getting incomplete data from db
+func DecryptData(data, passphrase string) ([]byte, error) {
 	// key := createHash(passphrase)
 	key := createSHA256Hash(passphrase)
 	block, err := aes.NewCipher([]byte(key))
@@ -60,11 +62,16 @@ func DecryptData(data []byte, passphrase string) ([]byte, error) {
 		return nil, err
 	}
 	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	msgbody, err := base64.StdEncoding.DecodeString(data)
+	// msgbody, err := base64.RawStdEncoding.DecodeString(data)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	nonce, ciphertext := msgbody[:nonceSize], msgbody[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		// log.Fatal(err)
-		// panic(err.Error())
 		return nil, err
 	}
 	return plaintext, nil
@@ -74,12 +81,12 @@ func encryptFile(filename string, data []byte, passphrase string) {
 	f, _ := os.Create(filename)
 	defer f.Close()
 	buf, _ := EncryptData(data, passphrase)
-	f.Write(buf)
+	f.Write([]byte(buf))
 }
 
 func decryptFile(filename string, passphrase string) []byte {
 	data, _ := os.ReadFile(filename)
-	buf, _ := DecryptData(data, passphrase)
+	buf, _ := DecryptData(string(data), passphrase)
 	return buf
 }
 

@@ -2,32 +2,30 @@ package main
 
 import (
 	"log"
-	"sshtunnel/modules"
+	"os"
+	"sshtunnel/cmd"
 )
 
 func main() {
+	f, err := os.OpenFile("rssh.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	modules.InitSession()
-	// parseKeys()
-	// portforward.PortForward()
-	// modules.GetInstanceInfo()
-	// modules.ImportVPSInstanceInfoToDB()
+	log.SetOutput(f)
+	// modules.InitSession()
 
-	// modules.ReadXLSX("gwn.xlsx")
 	// db, _ := sql.Open("sqlite3", "/opt/sqlite3/logserver.db")
 	// modules.ImportAWSInstancesToDB(db, "gwn", "eu-central-1")
 
-	// cmd.Execute()
-	// db, _ := sql.Open("sqlite3", "/opt/sqlite3/logserver.db")
-	// modules.ImportSSHKey(db, "gdms.pem", "rmtssh")
-	// modules.ExportSSHKey(db, "gdms", "rmtssh")
-	// cipherText.CT()
+	cmd.Execute()
 
+	/* a := make([][]string, 0)
+	for _, c := range []string{"1", "2", "3", "4"} {
+		b := []string{}
+		b = append(b, c)
+		a = append(a, b)
+	}
+	fmt.Println(len(a))
+	fmt.Println(cap(a)) */
 }
-
-// func networkTest() {
-// 	modules.ForSingnalUsage()
-// 	for _, ip := range []string{"52.83.235.118", "13.115.186.176"} {
-// 		networkdetect.LatencyTest(ip, 26222)
-// 	}
-// }

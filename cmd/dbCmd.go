@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	dbType        string
+	// dbType        string
 	sqlite3DBFile string
 
 	mysqlHost, mysqlPort, mysqlUser, mysqlPass string
@@ -71,6 +71,7 @@ var sqliCmd = &cobra.Command{
 			cmd.Help()
 			return
 		}
+
 		// initiate sqlite3 with customizate sql
 		log.Println("initialize sqlite3...")
 		if err := database.SQLite3Init(sqlite3DBFile); err != nil {

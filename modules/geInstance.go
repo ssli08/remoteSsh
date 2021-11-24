@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sshtunnel/cipherText"
 	"sshtunnel/database"
 	"strings"
 
@@ -96,7 +97,21 @@ var awsRegions = map[string]string{
 func GetVPSInstances() ([]instanceInfo, error) {
 	// api url https://www.vultr.com/api/#operation/list-instances
 	// VPSKey = "BSH32BR3NGLCHSUGZI3LS6YLEFDRM4222T4A"
-	os.Setenv("VPSKey", "BSH32BR3NGLCHSUGZI3LS6YLEFDRM4222T4A")
+	// os.Setenv("VPSKey", "BSH32BR3NGLCHSUGZI3LS6YLEFDRM4222T4A")
+	f, err := os.Open(database.DBConFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	d := json.NewDecoder(f)
+	var rssc database.RSSHConfig
+	if err := d.Decode(&rssc); err != nil {
+		log.Fatal("decode failed with error ", err)
+	}
+	if rssc.VPSKey == "" {
+		log.Fatalf("no VPSKey settings found in %s", f.Name())
+	}
+	os.Setenv("VPSKey", rssc.VPSKey)
+
 	apiKey, ok := os.LookupEnv("VPSKey")
 	if !ok {
 		return nil, fmt.Errorf("VPSKey not exist in system env, set it first")
@@ -246,4 +261,71 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 		}
 	}
 	log.Println("import aws instance to DB successfully.")
+}
+
+// import ssh key to specified db and use `passphrase` as key to encrypt ssh key content
+// encrypt program:
+// [string --> encrypted --> base64 encode --> db]
+func ImportSSHKey(db *sql.DB, keyFile, ssh_user, passphrase string) {
+	buf, err := os.ReadFile(keyFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// encrypted key
+	econtent, err := cipherText.EncryptData(buf, passphrase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// c := base64.StdEncoding.EncodeToString(econtent)
+	// sql := fmt.Sprintf("INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) values ('%s','%s', '%s', '%s')", strings.TrimSuffix(keyFile, ".pem"), path.Base(keyFile), econtent, ssh_user)
+	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) 
+	values 
+	('%s','%s', '%s', '%s')`, strings.TrimSuffix(keyFile, ".pem"), path.Base(keyFile), econtent, ssh_user)
+
+	if err := database.DBExecute(db, sql); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// return sshkey map
+// decrypted program:
+// [encyptedString --> base64 decode --> decrypted --> return (ssh_user,private_key)]
+func GetSSHKey(db *sql.DB, project, passphrase string) (string, string) {
+	sql := fmt.Sprintf("SELECT ssh_user, privateKey_content FROM sshkeys WHERE project='%s'", project)
+	rows, err := db.Query(sql)
+	if err != nil {
+		log.Fatal("query sql failed with error: ", err)
+	}
+	defer rows.Close()
+
+	// sshKey := map[string]string{}
+	var sshUser, privateKeyContent string
+	for rows.Next() {
+		// var sshUser, privateKeyContent string
+		rows.Scan(&sshUser, &privateKeyContent)
+		key, err := cipherText.DecryptData(privateKeyContent, passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// sshKey[project] = string(key)
+		privateKeyContent = string(key)
+	}
+	// fmt.Println(sshKey)
+	return sshUser, privateKeyContent
+}
+
+// import jumper host info to db
+func ImportJumperHosts(db *sql.DB, jumpHost, jumpUser, jumpPass, jumpPort, passphrase string) {
+	pass, err := cipherText.EncryptData([]byte(jumpPass), passphrase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sql := fmt.Sprintf(`INSERT INTO jumperHosts (jmphost, jmpuser, jmppass, jmpport)
+	values
+	('%s','%s','%s','%s')`, jumpHost, jumpUser, pass, jumpPort)
+
+	if err := database.DBExecute(db, sql); err != nil {
+		log.Fatal(err)
+	}
 }
