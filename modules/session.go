@@ -150,8 +150,11 @@ func linuxShell(session *ssh.Session) {
 		log.Fatal(err)
 	}
 	defer terminal.Restore(fd, orgState)
-
-	if err = session.RequestPty("xterm", hight, width, terminalModes); err != nil {
+	xterm := os.Getenv("TERM")
+	if xterm == "" {
+		xterm = "xterm-256color"
+	}
+	if err = session.RequestPty(xterm, hight, width, terminalModes); err != nil {
 		log.Fatalf("request pty error %s", err)
 	}
 	if err = session.Shell(); err != nil {
@@ -306,7 +309,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	fd := int(os.Stdin.Fd())
 	width, hight, err := terminal.GetSize(fd)
 	if err != nil {
-		return
+		return err
 	}
 
 	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認して対処する

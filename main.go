@@ -38,7 +38,7 @@ func main() {
 	// db, _ := sql.Open("sqlite3", "/opt/sqlite3/logserver.db")
 	// modules.ImportAWSInstancesToDB(db, "gwn", "eu-central-1")
 
-	if _, err := os.Stat(".db.ini"); os.IsNotExist(err) {
+	if _, err := os.Stat(".db.ini"); os.IsNotExist(err) && len(os.Args) < 2 {
 		fmt.Printf("%s usage:\n%s\n", os.Args[0], instuction())
 		return
 	}
