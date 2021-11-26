@@ -290,11 +290,26 @@ func ImportSSHKey(db *sql.DB, keyFile, ssh_user, passphrase string) {
 	}
 }
 
+func ImportSSHPassword(db *sql.DB, project, ssh_password, ssh_user, passcode string) {
+	econtent, err := cipherText.EncryptData([]byte(ssh_password), passcode)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) 
+	values 
+	('%s','%s', '%s', '%s')`, project, strings.Join([]string{project, "pass"}, "."), econtent, ssh_user)
+
+	if err := database.DBExecute(db, sql); err != nil {
+		log.Fatal(err)
+	}
+}
+
 // return sshkey map
 // decrypted program:
 // [encyptedString --> base64 decode --> decrypted --> return (ssh_user,private_key)]
-func GetSSHKey(db *sql.DB, project, passphrase string) (string, string) {
-	sql := fmt.Sprintf("SELECT ssh_user, privateKey_content FROM sshkeys WHERE project='%s'", project)
+func GetSSHKey(db *sql.DB, project, passphrase string) (string, string, string) {
+	sql := fmt.Sprintf("SELECT privateKey_name,ssh_user, privateKey_content FROM sshkeys WHERE project='%s'", project)
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal("query sql failed with error: ", err)
@@ -302,10 +317,10 @@ func GetSSHKey(db *sql.DB, project, passphrase string) (string, string) {
 	defer rows.Close()
 
 	// sshKey := map[string]string{}
-	var sshUser, privateKeyContent string
+	var privateKey_name, sshUser, privateKeyContent string
 	for rows.Next() {
 		// var sshUser, privateKeyContent string
-		rows.Scan(&sshUser, &privateKeyContent)
+		rows.Scan(&privateKey_name, &sshUser, &privateKeyContent)
 		key, err := cipherText.DecryptData(privateKeyContent, passphrase)
 		if err != nil {
 			log.Fatal(err)
@@ -314,7 +329,7 @@ func GetSSHKey(db *sql.DB, project, passphrase string) (string, string) {
 		privateKeyContent = string(key)
 	}
 	// fmt.Println(sshKey)
-	return sshUser, privateKeyContent
+	return privateKey_name, sshUser, privateKeyContent
 }
 
 // import jumper host info to db

@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"sshtunnel/database"
 
 	"strings"
 	"time"
@@ -24,32 +23,34 @@ var (
 	keyErr        *knownhosts.KeyError
 )
 
-func InitSSHClientConfig(user, password, proj string, timeout int) ssh.ClientConfig {
+func InitSSHClientConfig(user, password, privateKey, proj string, timeout int) ssh.ClientConfig {
 	var auth []ssh.AuthMethod
 	if password == "" {
-		db, err := database.GetDBConnInfo(database.DatabaseName)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer db.Close()
+		// db, err := database.GetDBConnInfo(database.DatabaseName)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// defer db.Close()
 
-		sshUser, sshKey := GetSSHKey(db, proj, Passcode)
-		if user == "" {
-			user = sshUser
-		}
+		// keyname,sshUser, sshKey := GetSSHKey(db, proj, Passcode)
+		// if user == "" {
+		// 	user = sshUser
+		// }
 
-		buf := []byte(sshKey)
+		buf := []byte(privateKey)
 		key, err := ssh.ParsePrivateKey(buf)
 		if err != nil {
-			log.Fatalf("parse key file failed with error %s used passwd only", err)
+			// log.Fatalf("parse key file failed with error %s, Input password instead", err)
+			fmt.Printf("parse key file failed with error %s, Input password instead", err)
+			os.Exit(1)
 		}
 		auth = append(auth, ssh.PublicKeys(key))
 	} else {
-		if user == "" {
-			// log.Fatalf("no ssh user provided, %s `--ru ssh_user` ", os.Args[0])
-			fmt.Printf("no ssh user provided, %s `--ru ssh_user`\n", os.Args[0])
-			os.Exit(1)
-		}
+		// if user == "" {
+		// 	// log.Fatalf("no ssh user provided, %s `--ru ssh_user` ", os.Args[0])
+		// 	fmt.Printf("no ssh user provided, %s `--ru ssh_user`\n", os.Args[0])
+		// 	os.Exit(1)
+		// }
 		auth = append(auth, ssh.Password(password))
 	}
 

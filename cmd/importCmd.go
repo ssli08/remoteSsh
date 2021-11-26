@@ -15,7 +15,8 @@ var (
 	instanceFile string
 
 	region           string
-	keyFile, sshUser string
+	keyFile, sshUser string // for sshkey importing
+	sshPassword      string // for ssh password importing
 
 	jumpHost, jumpUser, jumpPass, jumpPort string
 
@@ -102,6 +103,26 @@ var importSSHKeysCmd = &cobra.Command{
 
 	},
 }
+var importSSHPasswdCmd = &cobra.Command{
+	Use:   "sshpass",
+	Short: "import ssh password to DB",
+	Run: func(cmd *cobra.Command, args []string) {
+		if sshPassword == "" {
+			cmd.Help()
+			return
+		}
+		if s, err := os.Stat(database.DBConFile); !os.IsNotExist(err) && s.Size() != 0 {
+			db, err := database.GetDBConnInfo(database.DatabaseName)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer db.Close()
+			modules.ImportSSHPassword(db, project, sshPassword, sshUser, modules.Passcode)
+		} else {
+			log.Fatalf("%s not exist or not readable", database.DBConFile)
+		}
+	},
+}
 var importJumpHostCmd = &cobra.Command{
 	Use:   "jph",
 	Short: "import jump host info to DB",
@@ -150,6 +171,7 @@ func init() {
 	importInstancesCmd.AddCommand(importInstanceFromFileCmd)
 	importInstancesCmd.AddCommand(importSSHKeysCmd)
 	importInstancesCmd.AddCommand(importJumpHostCmd)
+	importInstancesCmd.AddCommand(importSSHPasswdCmd)
 
 	// updateInstanceFromAPI.Flags().BoolVarP(&api, "api", "i", false, "import instance from service api, both aws and vps service")
 	importInstanceFromAPICmd.Flags().StringVarP(&project, "project", "p", "gwn", "get project instances(aws account used)")
@@ -159,8 +181,12 @@ func init() {
 
 	// import ssh keys cmd args
 	importSSHKeysCmd.Flags().StringVarP(&keyFile, "keyfile", "k", "", "import this keyFile to DB")
-	importSSHKeysCmd.Flags().StringVarP(&sshUser, "sshUser", "s", "", "ssh user")
-	// importSSHKeys.Flags().StringVarP(&passcode, "passcode", "P", "rmttssh", "password for encypting keyFile content")
+	importSSHKeysCmd.Flags().StringVarP(&sshUser, "sshUser", "s", "", "import ssh user to DB")
+
+	// import ssh password cmd args
+	importSSHPasswdCmd.Flags().StringVarP(&sshPassword, "sshpasswd", "p", "", "import this ssh password to DB")
+	importSSHPasswdCmd.Flags().StringVarP(&sshUser, "su", "u", "", "import ssh user to DB")
+	importSSHPasswdCmd.Flags().StringVarP(&project, "proj", "j", "", "import consistent ssh password to DB for same project")
 
 	importJumpHostCmd.Flags().StringVar(&jumpHost, "jh", "", "jump host need to import db")
 	importJumpHostCmd.Flags().StringVar(&jumpUser, "ju", "ec2-user", "jump host ssh user need to import db")

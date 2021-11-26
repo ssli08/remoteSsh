@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -122,8 +123,9 @@ var (
 		PRIMARY KEY  (id)) ENGINE = InnoDB;
 	`, strings.Join([]string{DatabaseName, JumpHostsTableName}, "."))
 
-	// default database config file, hidden in current directoy
-	DBConFile = ".db.ini"
+	// default database config file, hidden in `$HOME` directoy
+	// DBConFile = ".db.ini"
+	DBConFile = path.Join(os.Getenv("HOME"), ".db.ini")
 )
 
 func QueryInstancesFromDB(db *sql.DB, project string) []map[string]string {

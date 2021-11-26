@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sshtunnel/cipherText"
 	"sshtunnel/database"
 	"strings"
@@ -89,26 +90,38 @@ func InitSession(print, fcopy bool, proj, rmtHost, rmtPort, rmtUser, rmtPass str
 		result := database.QueryInstancesFromDB(db, proj)
 		fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
 		for _, i := range result {
-			fmt.Printf("%-50s -- %s\n", i["Name"], i["PublicIP"])
+			fmt.Printf("%-45s -- %s\n", i["Name"], i["PublicIP"])
 		}
 		fmt.Println()
 		return
 	}
+
 	res := ChooseJumperHost(db)
-	pass, err := cipherText.DecryptData(res.JmpPass, Passcode)
-	if err != nil {
-		log.Fatal(err)
-	}
 	if rmtHost != "" {
 		if proj != "" {
-			makeProxyHost(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, proj, fcopy, fileList)
+			var privateKey string
+			keyname, sshUser, sshKey := GetSSHKey(db, proj, Passcode)
+			switch filepath.Ext(keyname) {
+			case ".pass":
+				rmtUser = sshUser
+				privateKey = ""
+				rmtPass = sshKey
+			case ".pem":
+				rmtUser = sshUser
+				rmtPass = ""
+				privateKey = sshKey
+			default:
+				fmt.Printf("no ssh_key/password record found for PROJECT %s in DB `sshkeys` [keyName: %s] , use your input pass instead\n", proj, keyname)
+				// os.Exit(1)
+			}
+			makeProxyHost(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, fcopy, fileList)
 		} else {
 			fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", res.JmpHost)
-			makeDirectSSH(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, proj, fcopy, fileList)
+			makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, fcopy, fileList)
 		}
 	} else {
 		fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
-		makeDirectSSH(res.JmpHost, res.JmpUser, string(pass), res.JmpPort, proj, fcopy, fileList)
+		makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, fcopy, fileList)
 	}
 
 	// network connection quality check
@@ -123,7 +136,11 @@ func ChooseJumperHost(db *sql.DB) database.QueryJumperHosts {
 	}
 	log.Println("min latency jump host", minLatencyJmpHosts)
 	res := database.GetJumperHostsInfo(db, minLatencyJmpHosts[0])
-
+	pass, err := cipherText.DecryptData(res.JmpPass, Passcode)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res.JmpPass = string(pass)
 	return res
 }
 
@@ -167,7 +184,7 @@ func linuxShell(session *ssh.Session) {
 func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, fileList []string) {
 	// make client
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
-	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, proj, 20)
+	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, "", proj, 20)
 	client, err := ssh.Dial("tcp", jumpHost, &sshConfig)
 
 	if err != nil {
@@ -190,11 +207,11 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, 
 	}
 }
 
-func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, proj string, fcopy bool, fileList []string) {
+func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj string, fcopy bool, fileList []string) {
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 
 	proxyConn := Connect{}
-	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, proj)
+	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, privateKey, proj)
 	if err != nil {
 		log.Fatal("jumper host connect failed with error: ", err)
 	}
@@ -205,9 +222,11 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 
 	remoteHost := net.JoinHostPort(rmtHost, rmtPort)
 
-	err = targetConn.createClient(remoteHost, rmtUser, rmtPass, proj)
+	err = targetConn.createClient(remoteHost, rmtUser, rmtPass, privateKey, proj)
 	if err != nil {
-		log.Fatal("remote host connect failed with error: ", err)
+		// log.Fatal("remote host connect failed with error: ", err)
+		fmt.Printf("failed to connect remote Host %s with error %s\n", remoteHost, err)
+		os.Exit(1)
 	}
 
 	// if filename == "" {
@@ -226,7 +245,7 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 
 }
 
-func (c *Connect) createClient(host, user, password, proj string) (err error) {
+func (c *Connect) createClient(host, user, password, privateKey, proj string) (err error) {
 
 	// Create new ssh.ClientConfig{}
 
@@ -235,7 +254,7 @@ func (c *Connect) createClient(host, user, password, proj string) (err error) {
 		timeout = c.ConnectTimeout
 	}
 
-	config := InitSSHClientConfig(user, password, proj, timeout)
+	config := InitSSHClientConfig(user, password, privateKey, proj, timeout)
 
 	// check Dialer
 	if c.ProxyDialer == nil {
