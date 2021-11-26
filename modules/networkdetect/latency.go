@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"runtime"
 	"sshtunnel/database"
 	"strconv"
 	"strings"
@@ -209,7 +210,9 @@ func sendSyn(laddr, raddr string, port uint16) time.Time {
 
 	conn, err := net.Dial("ip4:tcp", raddr)
 	if err != nil {
-		log.Fatalf("Dial: %s\n", err)
+		// log.Fatalf("Dial: %s\n", err)
+		fmt.Printf("Dial: %s\n", err)
+		os.Exit(1)
 	}
 
 	sendTime := time.Now()
@@ -284,6 +287,14 @@ func receiveSynAck(localAddress, remoteAddress string) time.Time {
 
 func ICMPPingLatency(raddr string) (time.Duration, error) {
 	var buf [1500]byte
+	switch runtime.GOOS {
+	case "darwin", "ios":
+	case "linux":
+		fmt.Println("you may need to adjust the net.ipv4.ping_group_range kernel state")
+	default:
+		fmt.Println("not supported on", runtime.GOOS)
+		os.Exit(1)
+	}
 	ip := interfaceAddress(chooseInterface())
 	if a := net.ParseIP(raddr); a == nil {
 		// return 0, fmt.Errorf("%s not valid ip address, exit", raddr)

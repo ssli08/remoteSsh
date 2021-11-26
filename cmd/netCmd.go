@@ -17,7 +17,7 @@ var (
 var netTestCmd = cobra.Command{
 	Use:   "net",
 	Short: "network latency test",
-	Long:  "a counter that count time from send syn to server and receive sync+ack",
+	Long:  "a counter that count duration between sending syn to server and receiving rst/sync+ack, icmp also support",
 	Run: func(cmd *cobra.Command, args []string) {
 		if rmtHost == "" || port == 0 {
 			cmd.Help()
