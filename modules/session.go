@@ -174,6 +174,23 @@ func linuxShell(session *ssh.Session) {
 	if err = session.RequestPty(xterm, hight, width, terminalModes); err != nil {
 		log.Fatalf("request pty error %s", err)
 	}
+
+	// resize terminal window size dynamicly
+	winch := syscall.Signal(0x1c)
+	signalchan := make(chan os.Signal, 1)
+	signal.Notify(signalchan, winch)
+	go func() {
+		for {
+			s := <-signalchan
+			switch s {
+			case winch:
+				fd := int(os.Stdout.Fd())
+				width, hight, _ = terminal.GetSize(fd)
+				session.WindowChange(hight, width)
+			}
+		}
+	}()
+
 	if err = session.Shell(); err != nil {
 		log.Fatalf("start shell error %s", err)
 	}
@@ -191,7 +208,7 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, 
 		log.Fatalf("dial %s failed with error %s", jmpHost, err.Error())
 	}
 	defer client.Close()
-
+	// c := Connect{Client: client}
 	// if filename == "" {
 	if !fcopy {
 		// make session
@@ -200,8 +217,9 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, 
 			log.Fatal("new session failed with error: ", err)
 		}
 		defer session.Close()
-
+		// c.xShell(session)
 		linuxShell(session)
+
 	} else {
 		localCopy(client, jmpHost, fileList)
 	}
