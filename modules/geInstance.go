@@ -96,8 +96,7 @@ var awsRegions = map[string]string{
 // get instances hosted in https://my.vultr.com/
 func GetVPSInstances() ([]instanceInfo, error) {
 	// api url https://www.vultr.com/api/#operation/list-instances
-	// VPSKey = "BSH32BR3NGLCHSUGZI3LS6YLEFDRM4222T4A"
-	// os.Setenv("VPSKey", "BSH32BR3NGLCHSUGZI3LS6YLEFDRM4222T4A")
+
 	f, err := os.Open(database.DBConFile)
 	if err != nil {
 		log.Fatal(err)
@@ -110,8 +109,8 @@ func GetVPSInstances() ([]instanceInfo, error) {
 	if rssc.VPSKey == "" {
 		log.Fatalf("no VPSKey settings found in %s", f.Name())
 	}
-	os.Setenv("VPSKey", rssc.VPSKey)
 
+	os.Setenv("VPSKey", rssc.VPSKey)
 	apiKey, ok := os.LookupEnv("VPSKey")
 	if !ok {
 		return nil, fmt.Errorf("VPSKey not exist in system env, set it first")
@@ -167,7 +166,11 @@ func ImportVPSInstancesToDB(db *sql.DB) {
 				values 
 				('%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn")
 			} else {
-				continue
+				// continue
+				sql = fmt.Sprintf(`INSERT INTO instances 
+				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT) 
+				values 
+				('%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other")
 			}
 
 			if database.IsRecordExist(db, instance.PublicIP) {
