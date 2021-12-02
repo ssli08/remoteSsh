@@ -2,52 +2,21 @@ package modules
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/sftp"
+	"github.com/schollz/progressbar/v3"
 	"golang.org/x/crypto/ssh"
 )
 
-/*
-func remoteCopyProgressBar(session *ssh.Session) {
-	fileTotleSize := func() int64 {
-		f, err := os.Open(filename)
-		if err != nil {
-			log.Fatalf("%s not exist", filename)
-		}
-		fInfo, _ := f.Stat()
-		return fInfo.Size()
-	}()
-	fmt.Println(fileTotleSize)
-	fname := fmt.Sprintf(os.Getenv("HOME") + "/" + filename)
-	file, err := os.OpenFile(fname, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
-
-	if err != nil {
-		log.Fatalf("read error: %s", err)
-	}
-	r, err := session.StdoutPipe()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	wn, err := io.Copy(file, r)
-	if err != nil {
-		log.Fatalf("trasfer file failed with error %s", err)
-	}
-	fmt.Printf("transfered file size %d, totalFileSize of %s is %d", wn, filename, fileTotleSize)
-
-	if err = session.Wait(); err != nil {
-		log.Fatal(err)
-	}
-
-}
-*/
-func localCopy(conn *ssh.Client, jmpHost string, filePath []string) {
+func localCopy(conn *ssh.Client, destPath string, lfilePath []string) {
 
 	var wg sync.WaitGroup
 
@@ -56,25 +25,58 @@ func localCopy(conn *ssh.Client, jmpHost string, filePath []string) {
 		log.Fatal(err)
 	}
 	defer sftpClient.Close()
+
+	s, err := conn.NewSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer s.Close()
+
 	defer wg.Wait()
 
-	if len(filePath) > 0 {
-		for _, file := range filePath {
-			// log.Printf("start copying file %s to %s", file, conn.RemoteAddr())
-			fmt.Printf("start copying file %s to %s\n", file, conn.RemoteAddr())
+	if len(lfilePath) > 0 {
+		for _, file := range lfilePath {
 			wg.Add(1)
-			go writeRemoteFile(file, jmpHost, sftpClient, conn.RemoteAddr(), &wg)
+			// log.Printf("start copying file %s to %s", file, conn.RemoteAddr())
+			go func(fileName string, wg *sync.WaitGroup) {
+				// fmt.Printf("start copying file %s to %s\n", fileName, conn.RemoteAddr())
+				defer wg.Done()
+				writeRemoteFile(fileName, destPath, s, sftpClient, conn.RemoteAddr())
+			}(file, &wg)
+
 		}
 	} else {
 		log.Fatal("no file provided, exit.")
 	}
+
 }
 
-func writeRemoteFile(filePath, jmpHost string, sftpClient *sftp.Client, raddr net.Addr, wg *sync.WaitGroup) {
+func writeRemoteFile(lfilePath, destPath string, session *ssh.Session, sftpClient *sftp.Client, raddr net.Addr) {
 
-	defer wg.Done()
+	lm := MD5Sum(lfilePath)
 
-	fileName := path.Base(filePath)
+	if destPath == "" {
+		d, _ := sftpClient.Getwd()
+		destPath = d
+	}
+	fileName := path.Join(destPath, path.Base(lfilePath))
+
+	if _, err := sftpClient.Lstat(fileName); err != nil {
+		// log.Println(err)
+		fmt.Printf("%s, start copying file %s to %s\n", err, lfilePath, raddr)
+	} else {
+		rm := RMD5Sum(session, fileName)
+		log.Printf("file %s' md5 local: (%s) remote: (%s)\n", lfilePath, lm, rm)
+		if lm == rm {
+			fmt.Printf("same md5 value for [%s] between  Local and Remote\n", lfilePath)
+			return
+		} else {
+			fmt.Printf("different md5 value for [%s] on remote server, start copying..", fileName)
+			sftpClient.Rename(fileName, strings.Join([]string{fileName, time.Now().Format("20060102-150405")}, "-"))
+		}
+	}
+
+	// fileName := path.Base(filePath)
 
 	f, err := sftpClient.Create(fileName)
 	if err != nil {
@@ -86,26 +88,35 @@ func writeRemoteFile(filePath, jmpHost string, sftpClient *sftp.Client, raddr ne
 		log.Fatal("change permission failed with error ", err)
 	}
 
-	buf, err := os.Open(filePath)
+	buf, err := os.Open(lfilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer buf.Close()
 
 	st := time.Now()
-	if _, err := f.ReadFrom(buf); err != nil {
-		log.Fatal("read error ", err)
-	}
-	// check time spending during file transportation
-	// duration := time.Now().Sub(st)
+	// if _, err := f.ReadFrom(buf); err != nil {
+	// 	log.Fatal("read error ", err)
+	// }
+
+	// progress bar setting
+	a, _ := buf.Stat()
+	// bar := progressbar.DefaultBytes(a.Size(), "transferring")
+	bar := progressBarDef(a.Size(), fmt.Sprintf("transferring file %s ", a.Name()))
+	io.Copy(io.MultiWriter(f, bar), buf)
+
 	duration := time.Since(st)
-	// buf, err := ioutil.ReadFile(filePath)
-	// if err != nil {
-	// 	log.Fatalf("read file error %s", err)
-	// }
-	// if _, err := f.Write(buf); err != nil {
-	// 	log.Fatal(err)
-	// }
-	md5 := MD5Sum(filePath)
-	fmt.Printf("Copy [File: %s, MD5: %x ] to %s successfully in %s.\n", fileName, md5, jmpHost, duration)
+	fmt.Printf("Copy [File: %s, MD5: %s ] to %s [remote path: %s] successfully in %s.\n", path.Base(lfilePath), lm, raddr.String(), destPath, duration)
+}
+
+func progressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
+	bar := progressbar.NewOptions64(
+		maxSize,
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetDescription(desc),
+		progressbar.OptionSetWidth(50),
+		// progressbar.OptionClearOnFinish(),
+		progressbar.OptionOnCompletion(func() { os.Stdout.Write([]byte("\n")) }),
+	)
+	return bar
 }
