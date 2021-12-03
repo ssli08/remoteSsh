@@ -75,7 +75,7 @@ const (
 )
 
 // InitSession session
-func InitSession(print, fcopy bool, proj, rmtHost, rmtPort, rmtUser, rmtPass string, fileList []string) {
+func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, rmtUser, rmtPass string, fileList []string) {
 
 	// Ctrl^C  handling in ssh session
 	// https://unix.stackexchange.com/questions/102061/ctrl-c-handling-in-ssh-session
@@ -100,28 +100,29 @@ func InitSession(print, fcopy bool, proj, rmtHost, rmtPort, rmtUser, rmtPass str
 	if rmtHost != "" {
 		if proj != "" {
 			var privateKey string
-			keyname, sshUser, sshKey := GetSSHKey(db, proj, Passcode)
-			switch filepath.Ext(keyname) {
+			sshinfo := GetSSHKey(db, proj, Passcode)
+			switch filepath.Ext(sshinfo.PrivateKeyName) {
 			case ".pass":
-				rmtUser = sshUser
+				rmtUser = sshinfo.SSHUser
 				privateKey = ""
-				rmtPass = sshKey
+				rmtPass = sshinfo.PrivateKeyContent
 			case ".pem":
-				rmtUser = sshUser
+				rmtUser = sshinfo.SSHUser
 				rmtPass = ""
-				privateKey = sshKey
+				privateKey = sshinfo.PrivateKeyContent
 			default:
-				fmt.Printf("no ssh_key/password record found for PROJECT %s in DB `sshkeys` [keyName: %s] , use your input pass instead\n", proj, keyname)
-				// os.Exit(1)
+				fmt.Printf("no ssh_key/password record found for %s (PROJECT %s) in DB `sshkeys`, use your input pass instead\n", rmtHost, proj)
+				return
 			}
-			makeProxyHost(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, fcopy, fileList)
+			makeProxyHost(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, fcopy, fileList)
 		} else {
-			fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", res.JmpHost)
-			makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, fcopy, fileList)
+			fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", rmtHost)
+			// makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
+			makeDirectSSH(rmtHost, rmtUser, rmtPass, rmtPort, proj, destPath, fcopy, fileList)
 		}
 	} else {
 		fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
-		makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, fcopy, fileList)
+		makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
 	}
 
 	// network connection quality check
@@ -162,6 +163,7 @@ func linuxShell(session *ssh.Session) {
 	if terminal.IsTerminal(int(fd)) {
 		width, hight, _ = terminal.GetSize(int(fd))
 	}
+
 	orgState, err := terminal.MakeRaw(fd)
 	if err != nil {
 		log.Fatal(err)
@@ -198,7 +200,7 @@ func linuxShell(session *ssh.Session) {
 		log.Fatalf("return error: %s", err)
 	}
 }
-func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, fileList []string) {
+func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj, destPath string, fcopy bool, fileList []string) {
 	// make client
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, "", proj, 20)
@@ -221,17 +223,17 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj string, fcopy bool, 
 		linuxShell(session)
 
 	} else {
-		localCopy(client, jmpHost, fileList)
+		localCopy(client, destPath, fileList)
 	}
 }
 
-func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj string, fcopy bool, fileList []string) {
+func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath string, fcopy bool, fileList []string) {
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 
 	proxyConn := Connect{}
 	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, privateKey, proj)
 	if err != nil {
-		log.Fatal("jumper host connect failed with error: ", err)
+		log.Fatal("failed to connect jumper host with error: ", err)
 	}
 	// target connnect
 	targetConn := Connect{
@@ -258,7 +260,7 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 		// linuxShell(session)
 	} else {
 		// localCopy(targetConn.Client, filename)
-		localCopy(targetConn.Client, jmpHost, fileList)
+		localCopy(targetConn.Client, destPath, fileList)
 	}
 
 }

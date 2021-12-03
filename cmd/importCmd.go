@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,9 +15,10 @@ var (
 	// api          bool
 	instanceFile string
 
-	region           string
-	keyFile, sshUser string // for sshkey importing
-	sshPassword      string // for ssh password importing
+	region                    string
+	keyFile, sshUser, sshPort string // for sshkey importing
+	sshPassword               string // for ssh password importing
+	role                      string // jumperHost or realBackendHost
 
 	jumpHost, jumpUser, jumpPass, jumpPort string
 
@@ -33,16 +35,13 @@ var importInstanceFromAPICmd = &cobra.Command{
 	Use:   "api",
 	Short: "import instances to DB from Service(aws/vps) API",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		if project == "" || region == "" {
 			cmd.Help()
 			return
 		}
 
-		if s, err := os.Stat(database.DBConFile); !os.IsNotExist(err) && s.Size() != 0 {
-			db, err := database.GetDBConnInfo(database.DatabaseName)
-			if err != nil {
-				log.Fatal(err)
-			}
+		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
 
 			modules.ImportAWSInstancesToDB(db, project, region)
@@ -50,9 +49,8 @@ var importInstanceFromAPICmd = &cobra.Command{
 				modules.ImportVPSInstancesToDB(db)
 			}
 		} else {
-			log.Fatalf("%s not exist or not readable", database.DBConFile)
+			log.Fatal(err)
 		}
-
 	},
 }
 
@@ -86,24 +84,23 @@ var importSSHKeysCmd = &cobra.Command{
 	Use:   "sshkey",
 	Short: "import sshkey to DB from keyfile",
 	Run: func(cmd *cobra.Command, args []string) {
-		if keyFile == "" || sshUser == "" {
+		if keyFile == "" && sshPassword == "" {
+			fmt.Println("keyFile or sshPassword need to be provided!!")
 			cmd.Help()
 			return
 		}
-		if s, err := os.Stat(database.DBConFile); !os.IsNotExist(err) && s.Size() != 0 {
-			db, err := database.GetDBConnInfo(database.DatabaseName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer db.Close()
-			modules.ImportSSHKey(db, keyFile, sshUser, modules.Passcode)
-		} else {
-			log.Fatalf("%s not exist or not readable", database.DBConFile)
-		}
+		// fmt.Println("k: ", keyFile, "p:", sshPassword)
 
+		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
+			defer db.Close()
+			modules.ImportSSHAuthentication(db, keyFile, sshUser, sshPort, sshPassword, role, modules.Passcode)
+		} else {
+			log.Fatal(err)
+		}
 	},
 }
-var importSSHPasswdCmd = &cobra.Command{
+
+/* var importSSHPasswdCmd = &cobra.Command{
 	Use:   "sshpass",
 	Short: "import ssh password to DB",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -117,12 +114,13 @@ var importSSHPasswdCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 			defer db.Close()
-			modules.ImportSSHPassword(db, project, sshPassword, sshUser, modules.Passcode)
+			modules.ImportSSHPassword(db, project, sshPassword, sshUser, sshPort, modules.Passcode)
 		} else {
 			log.Fatalf("%s not exist or not readable", database.DBConFile)
 		}
 	},
-}
+} */
+
 var importJumpHostCmd = &cobra.Command{
 	Use:   "jph",
 	Short: "import jump host info to DB",
@@ -151,15 +149,13 @@ var exportDBTableToFileCmd = &cobra.Command{
 			cmd.Help()
 			return
 		}
-		if s, err := os.Stat(database.DBConFile); !os.IsNotExist(err) && s.Size() != 0 {
-			db, err := database.GetDBConnInfo(database.DatabaseName)
-			if err != nil {
-				log.Fatal(err)
-			}
+
+		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
 			database.ExportTableTOCSVFile(db, expTableName)
+		} else {
+			log.Fatal(err)
 		}
-
 	},
 }
 
@@ -171,10 +167,10 @@ func init() {
 	importInstancesCmd.AddCommand(importInstanceFromFileCmd)
 	importInstancesCmd.AddCommand(importSSHKeysCmd)
 	importInstancesCmd.AddCommand(importJumpHostCmd)
-	importInstancesCmd.AddCommand(importSSHPasswdCmd)
+	// importInstancesCmd.AddCommand(importSSHPasswdCmd)
 
 	// updateInstanceFromAPI.Flags().BoolVarP(&api, "api", "i", false, "import instance from service api, both aws and vps service")
-	importInstanceFromAPICmd.Flags().StringVarP(&project, "project", "p", "gwn", "get project instances(aws account used)")
+	importInstanceFromAPICmd.Flags().StringVarP(&project, "project", "p", "", "get project instances(aws account used)")
 	importInstanceFromAPICmd.Flags().StringVarP(&region, "region", "r", "us-west-2", "get aws instances with different regions")
 
 	importInstanceFromFileCmd.Flags().StringVarP(&instanceFile, "file", "f", "", "import instance from file")
@@ -182,11 +178,14 @@ func init() {
 	// import ssh keys cmd args
 	importSSHKeysCmd.Flags().StringVarP(&keyFile, "keyfile", "k", "", "import this keyFile to DB")
 	importSSHKeysCmd.Flags().StringVarP(&sshUser, "sshUser", "s", "", "import ssh user to DB")
+	importSSHKeysCmd.Flags().StringVarP(&sshPort, "sshPort", "p", "26222", "import ssh port to DB")
+	importSSHKeysCmd.Flags().StringVarP(&sshPassword, "sshpasswd", "P", "", "import this ssh password to DB")
+	// importSSHKeysCmd.Flags().StringVarP(&role, "role", "r", "rs", "instance role [jumperServerrealServer] in DB")
 
 	// import ssh password cmd args
-	importSSHPasswdCmd.Flags().StringVarP(&sshPassword, "sshpasswd", "p", "", "import this ssh password to DB")
-	importSSHPasswdCmd.Flags().StringVarP(&sshUser, "su", "u", "", "import ssh user to DB")
-	importSSHPasswdCmd.Flags().StringVarP(&project, "proj", "j", "", "import consistent ssh password to DB for same project")
+	// importSSHPasswdCmd.Flags().StringVarP(&sshPassword, "sshpasswd", "p", "", "import this ssh password to DB")
+	// importSSHPasswdCmd.Flags().StringVarP(&sshUser, "su", "u", "", "import ssh user to DB")
+	// importSSHPasswdCmd.Flags().StringVarP(&project, "proj", "j", "", "import consistent ssh password to DB for same project")
 
 	importJumpHostCmd.Flags().StringVar(&jumpHost, "jh", "", "jump host need to import db")
 	importJumpHostCmd.Flags().StringVar(&jumpUser, "ju", "ec2-user", "jump host ssh user need to import db")

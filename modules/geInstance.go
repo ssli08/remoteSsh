@@ -43,6 +43,14 @@ import (
   }
 }
 */
+type SSHKeyInfo struct {
+	SSHUser           string
+	SSHPass           string
+	SSHPort           string
+	PrivateKeyContent string
+	PrivateKeyName    string
+	Project           string
+}
 type instanceInfo struct {
 	DateCreate string `json:"date_created"`
 	ID         string `json:"id"`
@@ -157,20 +165,20 @@ func ImportVPSInstancesToDB(db *sql.DB) {
 
 			if strings.Contains(strings.ToLower(instance.Label), "ssh") {
 				sql = fmt.Sprintf(`INSERT INTO instances
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT) 
+				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "ssh")
+				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "ssh", "vps")
 			} else if strings.Contains(strings.ToLower(instance.Label), "turn") {
 				sql = fmt.Sprintf(`INSERT INTO instances 
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT) 
+				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn")
+				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn", "vps")
 			} else {
 				// continue
 				sql = fmt.Sprintf(`INSERT INTO instances 
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT) 
+				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other")
+				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other", "vps")
 			}
 
 			if database.IsRecordExist(db, instance.PublicIP) {
@@ -253,9 +261,9 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 	}
 	for _, instance := range res {
 		sql := fmt.Sprintf(`INSERT INTO instances 
-		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT) 
+		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 		values 
-		('%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["Region"], project)
+		('%s','%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["Region"], project, "aws")
 
 		if database.IsRecordExist(db, instance["PublicIP"]) {
 			log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
@@ -271,48 +279,60 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 // import ssh key to specified db and use `passphrase` as key to encrypt ssh key content
 // encrypt program:
 // [string --> encrypted --> base64 encode --> db]
-func ImportSSHKey(db *sql.DB, keyFile, ssh_user, passphrase string) {
-	buf, err := os.ReadFile(keyFile)
-	if err != nil {
-		log.Fatal(err)
+func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_password, role, passphrase string) {
+	var ePass, eKey, project, privateKeyName string
+	var err error
+	// encrypted ssh password
+	if ssh_password != "" {
+		ePass, err = cipherText.EncryptData([]byte(ssh_password), passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	// encrypted key
+	if keyFile != "" {
+		buf, err := os.ReadFile(keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		eKey, err = cipherText.EncryptData(buf, passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
+		project = strings.TrimSuffix(path.Base(keyFile), ".pem")
+		privateKeyName = path.Base(keyFile)
 	}
 
-	// encrypted key
-	econtent, err := cipherText.EncryptData(buf, passphrase)
-	if err != nil {
-		log.Fatal(err)
-	}
 	// c := base64.StdEncoding.EncodeToString(econtent)
-	// sql := fmt.Sprintf("INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) values ('%s','%s', '%s', '%s')", strings.TrimSuffix(keyFile, ".pem"), path.Base(keyFile), econtent, ssh_user)
-	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) 
+	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user, ssh_port, ssh_password,role) 
 	values 
-	('%s','%s', '%s', '%s')`, strings.TrimSuffix(keyFile, ".pem"), path.Base(keyFile), econtent, ssh_user)
+	('%s','%s', '%s', '%s', '%s', '%s','%s')`, project, privateKeyName, eKey, ssh_user, ssh_port, ePass, role)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func ImportSSHPassword(db *sql.DB, project, ssh_password, ssh_user, passcode string) {
+/* func ImportSSHPassword(db *sql.DB, project, ssh_password, ssh_user, ssh_port, passcode string) {
 	econtent, err := cipherText.EncryptData([]byte(ssh_password), passcode)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user) 
-	values 
-	('%s','%s', '%s', '%s')`, project, strings.Join([]string{project, "pass"}, "."), econtent, ssh_user)
+	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user, ssh_port)
+	values
+	('%s','%s', '%s', '%s', '%s')`, project, strings.Join([]string{project, "pass"}, "."), econtent, ssh_user, ssh_port)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)
 	}
-}
+} */
 
 // return sshkey map
 // decrypted program:
 // [encyptedString --> base64 decode --> decrypted --> return (ssh_user,private_key)]
-func GetSSHKey(db *sql.DB, project, passphrase string) (string, string, string) {
-	sql := fmt.Sprintf("SELECT privateKey_name,ssh_user, privateKey_content FROM sshkeys WHERE project='%s'", project)
+func GetSSHKey(db *sql.DB, project, passphrase string) SSHKeyInfo {
+	sql := fmt.Sprintf("SELECT privateKey_name,ssh_user, privateKey_content, ssh_password FROM sshkeys WHERE project='%s'", project)
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal("query sql failed with error: ", err)
@@ -320,19 +340,26 @@ func GetSSHKey(db *sql.DB, project, passphrase string) (string, string, string) 
 	defer rows.Close()
 
 	// sshKey := map[string]string{}
-	var privateKey_name, sshUser, privateKeyContent string
+	sshkey := SSHKeyInfo{}
+	// var privateKey_name, sshUser, privateKeyContent string
 	for rows.Next() {
-		// var sshUser, privateKeyContent string
-		rows.Scan(&privateKey_name, &sshUser, &privateKeyContent)
-		key, err := cipherText.DecryptData(privateKeyContent, passphrase)
+		var privateKeyContent, sshPasswd string
+		// rows.Scan(&privateKey_name, &sshUser, &privateKeyContent)
+		rows.Scan(&sshkey.PrivateKeyName, &sshkey.SSHUser, &privateKeyContent, &sshPasswd)
+		eKey, err := cipherText.DecryptData(privateKeyContent, passphrase)
 		if err != nil {
 			log.Fatal(err)
 		}
-		// sshKey[project] = string(key)
-		privateKeyContent = string(key)
+		ePass, err := cipherText.DecryptData(privateKeyContent, passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sshkey.PrivateKeyContent = string(eKey)
+		sshkey.SSHPass = string(ePass)
 	}
 	// fmt.Println(sshKey)
-	return privateKey_name, sshUser, privateKeyContent
+	// return privateKey_name, sshUser, privateKeyContent
+	return sshkey
 }
 
 // import jumper host info to db

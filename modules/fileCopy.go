@@ -71,7 +71,7 @@ func writeRemoteFile(lfilePath, destPath string, session *ssh.Session, sftpClien
 			fmt.Printf("same md5 value for [%s] between  Local and Remote\n", lfilePath)
 			return
 		} else {
-			fmt.Printf("different md5 value for [%s] on remote server, start copying..", fileName)
+			fmt.Printf("different md5 value for [%s] on remote server, start copying..\n", fileName)
 			sftpClient.Rename(fileName, strings.Join([]string{fileName, time.Now().Format("20060102-150405")}, "-"))
 		}
 	}
@@ -101,12 +101,12 @@ func writeRemoteFile(lfilePath, destPath string, session *ssh.Session, sftpClien
 
 	// progress bar setting
 	a, _ := buf.Stat()
-	// bar := progressbar.DefaultBytes(a.Size(), "transferring")
-	bar := progressBarDef(a.Size(), fmt.Sprintf("transferring file %s ", a.Name()))
+	bar := progressbar.DefaultBytes(a.Size(), fmt.Sprintf("transferring file %s ", a.Name()))
+	// bar := progressBarDef(a.Size(), fmt.Sprintf("transferring file %s ", a.Name()))
 	io.Copy(io.MultiWriter(f, bar), buf)
 
 	duration := time.Since(st)
-	fmt.Printf("Copy [File: %s, MD5: %s ] to %s [remote path: %s] successfully in %s.\n", path.Base(lfilePath), lm, raddr.String(), destPath, duration)
+	fmt.Printf("Copy [File: %s, MD5: %s ] to %s [remote path: %s] successfully in %s.\n", path.Base(lfilePath), lm, raddr.String(), fileName, duration)
 }
 
 func progressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
@@ -116,7 +116,7 @@ func progressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWidth(50),
 		// progressbar.OptionClearOnFinish(),
-		progressbar.OptionOnCompletion(func() { os.Stdout.Write([]byte("\n")) }),
+		// progressbar.OptionOnCompletion(func() { os.Stdout.Write([]byte("\n")) }),
 	)
 	return bar
 }

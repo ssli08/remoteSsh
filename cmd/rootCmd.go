@@ -10,8 +10,11 @@ var (
 	project                            string
 	rmtHost, rmtUser, rmtPass, rmtPort string
 
-	print bool
-	fcopy bool //file copy
+	print    bool
+	fcopy    bool   // file copy
+	destPath string // file copy dest path
+
+	directly bool // directly connect real instance
 )
 
 var rootCmd = cobra.Command{
@@ -24,7 +27,8 @@ var rootCmd = cobra.Command{
 		// 	return
 		// }
 		// fmt.Println("args:", args)
-		modules.InitSession(print, fcopy, project, rmtHost, rmtPort, rmtUser, rmtPass, args)
+
+		modules.InitSession(print, fcopy, directly, project, destPath, rmtHost, rmtPort, rmtUser, rmtPass, args)
 	},
 }
 
@@ -38,7 +42,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&project, "project", "p", "", "project server to connect and show server list, options: gwn|gdms|ipvt")
 	rootCmd.Flags().BoolVarP(&print, "print", "s", false, "show instances list")
 	rootCmd.Flags().BoolVarP(&fcopy, "fcopy", "f", false, "copy files to remote host")
-	// rootCmd.Flags().StringVarP(&jmpHost, "jph", "j", "52.83.235.118", "jumper host")
+	rootCmd.Flags().StringVarP(&destPath, "dest", "d", "", "copy file to dest path")
 
 	// rootCmd.Flags().StringVar(&jmpUser, "jmpUser", "ec2-user", "jump host ssh user")
 	// rootCmd.Flags().StringVar(&jmpPort, "jmpPort", "26222", "jump host ssh user")
@@ -47,5 +51,8 @@ func init() {
 	rootCmd.Flags().StringVar(&rmtUser, "ru", "", "remote host ssh user")
 	rootCmd.Flags().StringVar(&rmtPass, "rp", "", "remote host ssh password")
 	rootCmd.Flags().StringVar(&rmtPort, "rport", "26222", "remote host ssh port")
+
+	// directly connect real instance
+	// rootCmd.Flags().BoolVarP(&directly, "direct", "d", false, "directly connect instance")
 
 }

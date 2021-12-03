@@ -1,50 +1,96 @@
 id,instance_name,public_ip,private_ip,region,project,insert_time,role
-1,Online-GWN-US-Master-20210926,52.24.166.89,11.0.206.233,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
-2,Online-GWN-US-Slave-20210926,52.42.72.81,11.0.206.105,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
-3,Online-GWN-US-Admin-20210926,54.202.245.21,11.0.206.60,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
-4,Online_GDMS_TURN_Tokyo-20201202065446,45.63.126.246,,nrt,turn,0000-00-00 00:00:00,data[7]
-5,Online_GDMS_TURN_Paris_Paris-20201202081126,136.244.119.27,,cdg,turn,0000-00-00 00:00:00,data[7]
-6,Online_GDMS_TURN_Singapore-20201203044255,45.77.240.246,,sgp,turn,0000-00-00 00:00:00,data[7]
-7,Online_GDMS_TURN_Los_Angeles-20201203104033,45.32.83.51,,lax,turn,0000-00-00 00:00:00,data[7]
-8,Online_GDMS_TURN_Miami-20201204011543,207.246.74.3,,mia,turn,0000-00-00 00:00:00,data[7]
-9,Online_GDMS_SSH_Tokyo_20210419,43.224.34.127,,nrt,ssh,0000-00-00 00:00:00,data[7]
-10,Online_GDMS_SSH_SiliconValley_20210423,45.63.87.1,,sjc,ssh,0000-00-00 00:00:00,data[7]
-11,Online_GDMS_SSH_Paris_20210423,45.76.46.199,,cdg,ssh,0000-00-00 00:00:00,data[7]
-12,Online_GDMS_SSH_Miami_20210429,149.28.111.163,,mia,ssh,0000-00-00 00:00:00,data[7]
-13,Online_GDMS_SSH_Singapore_20210507,207.148.69.92,,sgp,ssh,0000-00-00 00:00:00,data[7]
-14,Online_GDMS_SSH_Paris_20210902,95.179.221.251,,cdg,ssh,0000-00-00 00:00:00,data[7]
-15,Online_GDMS_SSH_Miami_20211020,144.202.33.196,,mia,ssh,0000-00-00 00:00:00,data[7]
-16,Online_GDMS_SSH_SiliconValley_20211110,45.32.131.163,,sjc,ssh,0000-00-00 00:00:00,data[7]
-17,Online-GDMS-STUN-SYSLOG,34.215.167.138,11.0.206.112,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-18,Online-GDMS-Slave-20200905,100.21.29.118,11.0.206.176,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-19,Online-GDMS-Master-20200905,54.69.43.157,11.0.206.142,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-20,Online-GDMS-Notification-20210412,34.217.185.246,11.0.206.229,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-21,Online_CloudIM_IM1-210507,54.184.209.7,11.0.206.144,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-22,Online_GDMS_Oregon_TurnAutoScale,52.25.48.102,11.0.206.8,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-23,Online-GDMS-Slave-20211029,34.208.176.19,11.0.206.5,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-24,Online_GDMS_Oregon-SSHConfig-20211105,34.223.138.204,11.0.206.148,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-25,Online_GDMS_Oregon-SSHbackup-20211105,44.238.247.163,11.0.206.250,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
-26,Online-EU-GDMS-STun-Syslog,52.28.7.85,11.0.206.122,Europe (Frankfurt),gdms,2021/11/24 19:31,
-27,Online-EU-GDMS-Slave-20200905,3.124.166.40,11.0.206.180,Europe (Frankfurt),gdms,2021/11/24 19:31,
-28,Online-EU-GDMS-Master-20200905,35.156.23.78,11.0.206.8,Europe (Frankfurt),gdms,2021/11/24 19:31,
-29,Online-EU_CloudIM_IM1-210507,18.198.199.26,11.0.206.146,Europe (Frankfurt),gdms,2021/11/24 19:31,
-30,Online-GWN-EU-Master-20210926,3.122.66.65,11.0.206.106,Europe (Frankfurt),gwn,2021/11/24 19:32,
-31,Online-GWN-EU-Slave-20210926,35.156.4.250,11.0.206.14,Europe (Frankfurt),gwn,2021/11/24 19:32,
-32,OnlineKeepOn_Production_Manage_Node,52.34.171.101,11.0.206.8,US West (Oregon),ipvt,2021/11/24 21:14,
-33,OnlineKeepOpen_WebPortal,52.35.123.108,11.0.181.11,US West (Oregon),ipvt,2021/11/24 21:14,
-34,Online_Slave_DNS-internal-20200805,34.209.194.156,11.0.206.10,US West (Oregon),ipvt,2021/11/24 21:14,
-35,Online_Slave_KServer-a-20200805,54.187.4.105,11.0.1.131,US West (Oregon),ipvt,2021/11/24 21:14,
-36,Online_Slave_Oregon_Asterisk-b-20200805,52.40.148.36,11.0.35.213,US West (Oregon),ipvt,2021/11/24 21:14,
-37,Online_Slave_WhiteBoard-20200805,54.70.61.68,11.0.180.11,US West (Oregon),ipvt,2021/11/24 21:14,
-38,Online_Slave_Oregon_MCU-b-20200805,34.219.195.30,11.0.208.46,US West (Oregon),ipvt,2021/11/24 21:14,
-39,Online_Slave_Web-b-20201128,54.149.151.87,11.0.180.176,US West (Oregon),ipvt,2021/11/24 21:14,
-40,Online_Slave_KServer-c-20201217,34.210.89.32,11.0.1.161,US West (Oregon),ipvt,2021/11/24 21:14,
-41,Online_Slave_Task-20210107,44.228.144.64,11.0.180.198,US West (Oregon),ipvt,2021/11/24 21:14,
-42,OnlineKeepOn_Master_Default_Zabbix-20210107,52.24.25.35,11.0.206.204,US West (Oregon),ipvt,2021/11/24 21:14,
-43,Online_Slave_Web-a-20210113,18.236.116.20,11.0.180.136,US West (Oregon),ipvt,2021/11/24 21:14,
-44,Online_Slave_Paris_Asterisk-20200805,15.236.177.160,11.0.36.20,Europe (Paris),ipvt,2021/11/24 21:14,
-45,Online_Slave_Paris_MCU-20200805,35.181.89.174,11.0.208.148,Europe (Paris),ipvt,2021/11/24 21:14,
-46,Online_Slave_Singapore_Asterisk-20200805,54.254.47.183,11.0.39.71,Asia Pacific (Singapore),ipvt,2021/11/24 21:14,
-47,Online_Slave_Singapore_MCU-20200805,13.229.35.248,11.0.208.6,Asia Pacific (Singapore),ipvt,2021/11/24 21:14,
-48,Online_Slave_Tokyo_Asterisk-a-20201221,54.248.15.4,11.0.35.40,Asia Pacific (Tokyo),ipvt,2021/11/24 21:14,
-49,Online_Slave_Tokyo_MCU-20201221,13.230.155.30,11.0.208.49,Asia Pacific (Tokyo),ipvt,2021/11/24 21:14,
+1,GWN_MySQL_Statics_210128,35.160.234.72,11.0.206.142,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
+2,GWN_MySQL_Basic_DNS_210608_Repl,52.24.56.176,11.0.206.138,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
+3,Online-GWN-US-Master-20210926,52.24.166.89,11.0.206.233,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
+4,Online-GWN-US-Slave-20210926,52.42.72.81,11.0.206.105,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
+5,Online-GWN-US-Admin-20210926,54.202.245.21,11.0.206.60,US West (Oregon),gwn,0000-00-00 00:00:00,data[7]
+6,Online_GDMS_TURN_Tokyo-20201202065446,45.63.126.246,,nrt,turn,0000-00-00 00:00:00,data[7]
+7,Online_GDMS_TURN_Paris_Paris-20201202081126,136.244.119.27,,cdg,turn,0000-00-00 00:00:00,data[7]
+8,Online_GDMS_TURN_Singapore-20201203044255,45.77.240.246,,sgp,turn,0000-00-00 00:00:00,data[7]
+9,Online_GDMS_TURN_Los_Angeles-20201203104033,45.32.83.51,,lax,turn,0000-00-00 00:00:00,data[7]
+10,Online_GDMS_TURN_Miami-20201204011543,207.246.74.3,,mia,turn,0000-00-00 00:00:00,data[7]
+11,Online_GDMS_SSH_Tokyo_20210419,43.224.34.127,,nrt,ssh,0000-00-00 00:00:00,data[7]
+12,Online_GDMS_SSH_SiliconValley_20210423,45.63.87.1,,sjc,ssh,0000-00-00 00:00:00,data[7]
+13,Online_GDMS_SSH_Paris_20210423,45.76.46.199,,cdg,ssh,0000-00-00 00:00:00,data[7]
+14,Online_GDMS_SSH_Miami_20210429,149.28.111.163,,mia,ssh,0000-00-00 00:00:00,data[7]
+15,Online_GDMS_SSH_Singapore_20210507,207.148.69.92,,sgp,ssh,0000-00-00 00:00:00,data[7]
+16,Online_GDMS_SSH_Paris_20210902,95.179.221.251,,cdg,ssh,0000-00-00 00:00:00,data[7]
+17,Online_GDMS_SSH_Miami_20211020,144.202.33.196,,mia,ssh,0000-00-00 00:00:00,data[7]
+18,Online_GDMS_SSH_SiliconValley_20211110,45.32.131.163,,sjc,ssh,0000-00-00 00:00:00,data[7]
+19,Online-GDMS-STUN-SYSLOG,34.215.167.138,11.0.206.112,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+20,Online-GDMS-Slave-20200905,100.21.29.118,11.0.206.176,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+21,Online-GDMS-Master-20200905,54.69.43.157,11.0.206.142,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+22,Online-GMDS_MySQL-DNS-0927,34.209.37.63,11.0.206.24,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+23,Online-GDMS-Notification-20210412,34.217.185.246,11.0.206.229,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+24,Online_CloudIM_IM1-210507,54.184.209.7,11.0.206.144,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+25,Online_GDMS_Oregon_TurnAutoScale,52.25.48.102,11.0.206.8,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+26,Online-GDMS-Slave-20211029,34.208.176.19,11.0.206.5,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+27,Online_GDMS_Oregon-SSHConfig-20211105,34.223.138.204,11.0.206.148,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+28,Online_GDMS_Oregon-SSHbackup-20211105,44.238.247.163,11.0.206.250,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+29,Online_CloudIM_MySQL-211122-repl,52.32.134.108,11.0.206.126,US West (Oregon),gdms,0000-00-00 00:00:00,data[7]
+30,Online-EU-GDMS-MySQL-dns,3.120.1.3,11.0.206.10,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+31,Online-EU-GDMS-STun-Syslog,52.28.7.85,11.0.206.122,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+32,Online-EU-GDMS-Slave-20200905,3.124.166.40,11.0.206.180,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+33,Online-EU-GDMS-Master-20200905,35.156.23.78,11.0.206.8,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+34,Online-EU_CloudIM_IM1-210507,18.198.199.26,11.0.206.146,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+35,Online-EU_CloudIM_MySQL-211122-repl,18.198.219.182,11.0.206.7,Europe (Frankfurt),gdms,2021-11-24 19:31:56,
+36,MySQL_Basic_dns,3.122.80.49,11.0.206.19,Europe (Frankfurt),gwn,2021-11-24 19:32:29,
+37,MySQL_Statistics_210317,3.121.75.18,11.0.206.126,Europe (Frankfurt),gwn,2021-11-24 19:32:29,
+38,Online-GWN-EU-Master-20210926,3.122.66.65,11.0.206.106,Europe (Frankfurt),gwn,2021-11-24 19:32:29,
+39,Online-GWN-EU-Slave-20210926,35.156.4.250,11.0.206.14,Europe (Frankfurt),gwn,2021-11-24 19:32:29,
+40,OnlineKeepOn_Production_Manage_Node,52.34.171.101,11.0.206.8,US West (Oregon),ipvt,2021-11-24 21:14:53,
+41,OnlineKeepOpen_WebPortal,52.35.123.108,11.0.181.11,US West (Oregon),ipvt,2021-11-24 21:14:53,
+42,Online_Slave_DNS-internal-20200805,34.209.194.156,11.0.206.10,US West (Oregon),ipvt,2021-11-24 21:14:53,
+43,Online_Slave_KServer-a-20200805,54.187.4.105,11.0.1.131,US West (Oregon),ipvt,2021-11-24 21:14:53,
+44,Online_Slave_Oregon_Asterisk-b-20200805,52.40.148.36,11.0.35.213,US West (Oregon),ipvt,2021-11-24 21:14:53,
+45,Online_Slave_WhiteBoard-20200805,54.70.61.68,11.0.180.11,US West (Oregon),ipvt,2021-11-24 21:14:53,
+46,Online_Slave_Oregon_MCU-b-20200805,34.219.195.30,11.0.208.46,US West (Oregon),ipvt,2021-11-24 21:14:53,
+47,Online_Slave_Web-b-20201128,54.149.151.87,11.0.180.176,US West (Oregon),ipvt,2021-11-24 21:14:53,
+48,Online_Slave_KServer-c-20201217,34.210.89.32,11.0.1.161,US West (Oregon),ipvt,2021-11-24 21:14:53,
+49,Online_Slave_Task-20210107,44.228.144.64,11.0.180.198,US West (Oregon),ipvt,2021-11-24 21:14:53,
+50,OnlineKeepOn_Master_Default_Zabbix-20210107,52.24.25.35,11.0.206.204,US West (Oregon),ipvt,2021-11-24 21:14:53,
+51,Online_Slave_Web-a-20210113,18.236.116.20,11.0.180.136,US West (Oregon),ipvt,2021-11-24 21:14:53,
+52,Online_Slave_Default_Mysql_210401_repl,52.42.161.71,11.0.204.243,US West (Oregon),ipvt,2021-11-24 21:14:53,
+53,Online_Slave_Paris_Asterisk-20200805,15.236.177.160,11.0.36.20,Europe (Paris),ipvt,2021-11-24 21:14:53,
+54,Online_Slave_Paris_MCU-20200805,35.181.89.174,11.0.208.148,Europe (Paris),ipvt,2021-11-24 21:14:53,
+55,Online_Slave_Singapore_Asterisk-20200805,54.254.47.183,11.0.39.71,Asia Pacific (Singapore),ipvt,2021-11-24 21:14:53,
+56,Online_Slave_Singapore_MCU-20200805,13.229.35.248,11.0.208.6,Asia Pacific (Singapore),ipvt,2021-11-24 21:14:53,
+57,Online_Slave_Tokyo_Asterisk-a-20201221,54.248.15.4,11.0.35.40,Asia Pacific (Tokyo),ipvt,2021-11-24 21:14:53,
+58,Online_Slave_Tokyo_MCU-20201221,13.230.155.30,11.0.208.49,Asia Pacific (Tokyo),ipvt,2021-11-24 21:14:53,
+59,JHZHAO_jhzhao_turn_server_ForOnline,52.34.67.236,172.31.6.109,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+60,XHHUANG_ip2location,52.10.39.217,11.0.1.6,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+61,GDMS-Test_www-test.gdms.cloud,54.71.36.138,11.0.207.101,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+62,CloudIM_chfshan_Oregon_im-1,44.234.234.3,11.0.207.178,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+63,CloudIM_chfshan_Oregon_im-2,54.189.87.15,11.0.207.32,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+64,CloudIMWli_Oregon_database,35.163.132.252,11.0.207.134,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+65,CloudIMWli_Oregon_IM2,52.35.101.160,11.0.207.215,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+66,CloudIMWli_Oregon_IM1,44.242.19.132,11.0.207.19,US West (Oregon),ipvt_test,2021-11-26 20:51:48,
+67,CloudIM_chfshan_Oregon_database_2,35.83.125.226,11.0.207.79,US West (Oregon),ipvt_test,2021-11-26 20:51:49,
+68,JHZHAO_download_server2(Li MengJie),54.222.179.216,172.31.31.112,China (Beijing),bj_test,2021-11-26 20:52:29,
+69,BiChen_FengOffice_52.81.121.65,52.81.121.65,11.0.180.100,China (Beijing),bj_test,2021-11-26 20:52:29,
+70,GdmsWork_Master_Default_www.gdms.work,54.223.19.233,11.0.180.188,China (Beijing),bj_test,2021-11-26 20:52:29,
+71,Ningxia_Manage_Zabbix,52.83.235.118,11.0.206.100,China (Ningxia),nx_test,2021-11-26 20:52:45,
+72,XHHuang_GAPS_Proxy,52.83.171.213,11.0.206.206,China (Ningxia),nx_test,2021-11-26 20:52:45,
+73,BoZhou_GSWAVE_APNS,52.83.184.159,11.0.206.54,China (Ningxia),nx_test,2021-11-26 20:52:45,
+74,Proxy_ipvideotalk.cn,52.83.188.149,11.0.180.18,China (Ningxia),nx_test,2021-11-26 20:52:45,
+75,TurnServer_Replace_XiaShaIDC-200919,161.189.44.114,11.0.206.11,China (Ningxia),nx_test,2021-11-26 20:52:45,
+76,SZPcXu_Master_Default_GDMS,161.189.109.209,11.0.206.228,China (Ningxia),nx_test,2021-11-26 20:52:45,
+77,SZPcXu_Master_Default_sshserver,52.83.137.81,11.0.206.241,China (Ningxia),nx_test,2021-11-26 20:52:45,
+78,fw.gdms.cloud-new-20210927,137.220.35.215,,settle_us,gdms,2021-11-30 10:33:49,
+79,Weather Master,207.246.67.26,,mia,other,2021-11-30 10:33:48,
+80,Weather slave,108.61.195.62,,sea,other,2021-11-30 10:33:48,
+81,UCM demo page and GSWave apns,45.32.120.90,,sgp,other,2021-11-30 10:33:48,
+82,GDMS Download server(us.download.gdms.cloud),144.202.94.88,,sea,other,2021-11-30 10:33:48,
+83,Weather Slave2,45.32.168.215,,mia,other,2021-11-30 10:33:49,
+84,GDMS Download server(eu.download.gdms.cloud),217.69.12.50,,cdg,other,2021-11-30 10:33:49,
+85,Chfshan_Performance_for_SipProxy1,45.76.163.32,,sgp,other,2021-11-30 10:33:49,
+86,Chfshan_Performance_for_SipProxy2,207.148.77.198,,sgp,other,2021-11-30 10:33:49,
+87,Chfshan_Performance_for_SipProxy4,45.77.44.65,,sgp,other,2021-11-30 10:33:49,
+88,Chfshan_Performance_for_SipProxy10,149.28.129.90,,sgp,other,2021-11-30 10:33:49,
+89,Chfshan_Performance_for_SipProxy9,45.77.39.107,,sgp,other,2021-11-30 10:33:49,
+90,Chfshan_Performance_for_SipProxy8,207.148.117.33,,sgp,other,2021-11-30 10:33:49,
+91,Chfshan_Performance_for_SipProxy7,139.180.212.60,,sgp,other,2021-11-30 10:33:49,
+92,Chfshan_Performance_for_SipProxy6,45.76.162.22,,sgp,other,2021-11-30 10:33:49,
+93,Chfshan_Performance_for_SipProxy5,139.180.146.204,,sgp,other,2021-11-30 10:33:49,
+94,Chfshan_Performance_for_SipProxy11,45.32.104.95,,sgp,other,2021-11-30 10:33:49,
+95,Online-GWN-Router,129.159.37.3,,San Jose,gwn,2021-11-30 10:50:52,

@@ -51,18 +51,22 @@ var (
 			public_ip CHAR(64) NOT NULL,
 			private_ip CHAR(64) NOT NULL,
 			region TEXT NOT NULL, 
+			latency INT NOT NULL DEFAULT 0,
 			project CHAR(64) NOT NULL, 
+			platform VARCHAR(64) NOT NULL,
 			insert_time  NOT NULL DEFAULT CURRENT_TIMESTAMP, 
 			role CHAR(10));
 		`, InstanceTableName)
 
 	sqlite3InitSSHKeyTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (
 		SSH_USER VARCHAR(10) NOT NULL,
-		PRIVATEKEY_CONTENT TEXT NOT NULL,    
-		PRIVATEKEY_NAME CHAR(64) NOT NULL,
-		PROJECT CHAR(64) NOT NULL, 
+		SSH_PASSWORD VARCHAR(200),
+		SSH_PORT VARCHAR(20),
+		PRIVATEKEY_CONTENT TEXT,    
+		PRIVATEKEY_NAME CHAR(64),
+		PROJECT VARCHAR(64) NOT NULL, 
 		INSERT_TIME  NOT NULL DEFAULT CURRENT_TIMESTAMP, 
-		NOTES CHAR(10));
+		ROLE CHAR(10));
 	`, SSHKeyTableName)
 
 	sqlite3InitJumperHostsTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (
@@ -95,7 +99,9 @@ var (
 			public_ip VARCHAR(25) NOT NULL, 
 			private_ip VARCHAR(25) NOT NULL , 
 			region VARCHAR(64) NOT NULL , 
+			latency SMALLINT NOT NULL DEFAULT 0,
 			project VARCHAR(64) NOT NULL , 
+			platform VARCHAR(64) NOT NULL ,
 			insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
 			role VARCHAR(32) NOT NULL, 
 			PRIMARY KEY (id)) ENGINE = InnoDB;`, strings.Join([]string{DatabaseName, InstanceTableName}, "."))
@@ -104,22 +110,24 @@ var (
 	CREATE TABLE IF NOT EXISTS %s ( 
 		id BIGINT(20) NOT NULL auto_increment, 
 		ssh_user VARCHAR(10) NOT NULL,
-		privateKey_content TEXT NOT NULL, 
-		privateKey_name VARCHAR(64) NOT NULL,
+		ssh_password VARCHAR(200),
+		ssh_port VARCHAR(20),
+		privateKey_content TEXT, 
+		privateKey_name VARCHAR(64),
 		project VARCHAR(64) NOT NULL , 
 		insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
-		notes VARCHAR(32) NOT NULL, PRIMARY KEY  (id)) ENGINE = InnoDB;
-	`, strings.Join([]string{DatabaseName, SSHKeyTableName}, "."))
+		role VARCHAR(32) NOT NULL, 
+		PRIMARY KEY  (id)) ENGINE = InnoDB;`, strings.Join([]string{DatabaseName, SSHKeyTableName}, "."))
 
 	mySQLInitJumperHostsTable = fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s ( 
-		id BIGINT(20) NOT NULL auto_increment, 
+	CREATE TABLE IF NOT EXISTS %s (
+		id BIGINT(20) NOT NULL auto_increment,
 		jmphost VARCHAR(25) NOT NULL,
 		jmpuser VARCHAR(25) NOT NULL,
 		jmppass VARCHAR(200) NOT NULL,
 		jmpport VARCHAR(25) NOT NULL DEFAULT 26222,
 		latency SMALLINT NOT NULL DEFAULT 0,
-		insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  		
+		insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY  (id)) ENGINE = InnoDB;
 	`, strings.Join([]string{DatabaseName, JumpHostsTableName}, "."))
 
@@ -302,6 +310,11 @@ func GetDBConnInfo(dbname string) (*sql.DB, error) {
 		conn RSSHConfig
 		db   *sql.DB
 	)
+
+	s, err := os.Stat(DBConFile)
+	if os.IsNotExist(err) || s.Size() == 0 {
+		return nil, fmt.Errorf("%s is not found or empty file", DBConFile)
+	}
 
 	f, err := os.Open(DBConFile)
 	if err != nil {

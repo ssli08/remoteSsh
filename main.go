@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"sshtunnel/cmd"
 	"sshtunnel/database"
 )
@@ -28,7 +29,14 @@ var (
 )
 
 func main() {
-	f, err := os.OpenFile("/tmp/rssh.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+
+	if runtime.GOOS == "windows" {
+		log.Fatal("not support windows yet!!!")
+	}
+
+	file := "/tmp/rssh.log"
+
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,6 +52,7 @@ func main() {
 	}
 
 	cmd.Execute()
+
 }
 
 func Color(colorString string) func(...interface{}) string {

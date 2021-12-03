@@ -41,7 +41,7 @@ func InitSSHClientConfig(user, password, privateKey, proj string, timeout int) s
 		key, err := ssh.ParsePrivateKey(buf)
 		if err != nil {
 			// log.Fatalf("parse key file failed with error %s, Input password instead", err)
-			fmt.Printf("parse key file failed with error %s, Input password instead", err)
+			fmt.Printf("parse key file failed with error %s, Input password instead\n", err)
 			os.Exit(1)
 		}
 		auth = append(auth, ssh.PublicKeys(key))
