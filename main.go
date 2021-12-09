@@ -52,6 +52,7 @@ func main() {
 	}
 
 	cmd.Execute()
+	// modules.MultiProgressBarPresentation(500, 10)
 
 }
 

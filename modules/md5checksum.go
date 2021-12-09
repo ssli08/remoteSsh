@@ -3,6 +3,7 @@ package modules
 import (
 	"bytes"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -31,16 +32,23 @@ func MD5Sum(filePath string) string {
 	return a
 }
 
-func RMD5Sum(session *ssh.Session, filePath string) string {
+func RMD5Sum(conn *ssh.Client, filePath string) (string, error) {
 	var ebuf, obuf bytes.Buffer
+
+	session, err := conn.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("new session failed with error %s", err)
+	}
+
 	session.Stderr = &ebuf
 	session.Stdout = &obuf
 	if err := session.Run(fmt.Sprintf("md5sum %s|cut -d ' ' -f1|xargs echo -n", filePath)); err != nil {
-		fmt.Println("rum cmd: ", err)
+		// fmt.Println("rum cmd: ", err)
 		// log.Fatal(err)
+		return "", fmt.Errorf("rum cmd: %s", err)
 	}
 	if ebuf.String() != "" {
-		return ebuf.String()
+		return "", errors.New(ebuf.String())
 	}
-	return obuf.String()
+	return obuf.String(), nil
 }

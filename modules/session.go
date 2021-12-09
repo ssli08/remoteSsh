@@ -104,15 +104,15 @@ func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, 
 			switch filepath.Ext(sshinfo.PrivateKeyName) {
 			case ".pass":
 				rmtUser = sshinfo.SSHUser
-				privateKey = ""
+				// privateKey = ""
 				rmtPass = sshinfo.PrivateKeyContent
 			case ".pem":
 				rmtUser = sshinfo.SSHUser
-				rmtPass = ""
+				// rmtPass = ""
 				privateKey = sshinfo.PrivateKeyContent
 			default:
 				fmt.Printf("no ssh_key/password record found for %s (PROJECT %s) in DB `sshkeys`, use your input pass instead\n", rmtHost, proj)
-				return
+				// return
 			}
 			makeProxyHost(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, fcopy, fileList)
 		} else {
