@@ -85,7 +85,7 @@ func excecuteCmd(cmd, host, port string, config *ssh.ClientConfig) string {
 
 }
 
-func reverseServ(host, port string, config *ssh.ClientConfig) {
+func ReverseServ(host, port string, config *ssh.ClientConfig) {
 	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
 	if err != nil {
 		log.Fatal(err)

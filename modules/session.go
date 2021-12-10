@@ -60,14 +60,14 @@ type Connect struct {
 	// Forward x11 flag.
 	ForwardX11 bool
 
-	// shell terminal log flag
+	/* // shell terminal log flag
 	logging bool
 
 	// terminal log add timestamp flag
 	logTimestamp bool
 
 	// terminal log path
-	logFile string
+	logFile string */
 }
 
 const (

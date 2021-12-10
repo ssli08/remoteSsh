@@ -165,7 +165,7 @@ func localCopy(conn *ssh.Client, destPath string, lfilePath []string) {
 }
 
 // 3rd part progresssbar for `progresssbar` lib
-func progressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
+func ProgressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
 
 	bar := progressbar.NewOptions64(
 		maxSize,
@@ -179,7 +179,7 @@ func progressBarDef(maxSize int64, desc string) *progressbar.ProgressBar {
 }
 
 // 3rd part single progresssbar for `pb` lib
-func exPB(filename string, buf io.Reader, rf io.Writer) {
+func ExPB(filename string, buf io.Reader, rf io.Writer) {
 	t, _ := os.Stat(filename)
 	bar := pb.New(int(t.Size())).SetUnits(pb.U_BYTES).SetRefreshRate(10 * time.Millisecond)
 	defer bar.Finish()
@@ -198,7 +198,7 @@ func exPB(filename string, buf io.Reader, rf io.Writer) {
 }
 
 // 3rd part multiple progresssbar for `pb` lib
-func exMultiplePB() {
+func ExMultiplePB() {
 	// create bars
 	first := pb.New(200).Prefix("First ")
 	second := pb.New(200).Prefix("Second ")
