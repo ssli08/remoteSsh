@@ -48,7 +48,7 @@ func (f *FileTransfer) appendResources(filename string) {
 		})
 }
 
-func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) {
+func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) Resource {
 	defer f.wg.Done()
 	// f.pool <- &rs
 	sc, err := sftp.NewClient(f.Conn)
@@ -74,7 +74,7 @@ func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) {
 		if rs.LFileMD5 == rmd5 {
 			// fmt.Printf("same md5 value for [%s] between  Local and Remote\n", rs.Filename)
 			fmt.Printf("Local file (%s) has the same MD5 value as the Remote, nothing to do\n", rs.Filename)
-			return
+			return Resource{}
 		} else {
 			fmt.Printf("get different md5 value for [%s] on remote server, start copying..\n", targetFileName)
 			sc.Rename(targetFileName, strings.Join([]string{targetFileName, time.Now().Format("20060102-150405")}, "-"))
@@ -116,6 +116,9 @@ func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) {
 			decor.Name(" ] "),
 			// decor.EwmaSpeed(decor.UnitKiB, "% .2f", 60),
 			decor.AverageSpeed(decor.UnitKiB, "% .2f"),
+			// decor.OnComplete(
+			// 	decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
+			// ),
 		),
 	)
 	reader := bar.ProxyReader(buf)
@@ -127,19 +130,29 @@ func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) {
 	duration := time.Since(st)
 	log.Printf("Copy [File: %s, MD5: %s ] to %s [remote path: %s] successfully in %s.\n",
 		path.Base(rs.Filename), rs.LFileMD5, f.Conn.RemoteAddr(), targetFileName, duration)
-
+	return rs
 	// <-f.pool
 }
 func (f *FileTransfer) start() {
 	// f.pool = make(chan *Resource, runtime.NumCPU())
-	p := mpb.New(mpb.WithWaitGroup(f.wg), mpb.WithRefreshRate(10*time.Millisecond))
+	result := []Resource{}
 
+	p := mpb.New(mpb.WithWaitGroup(f.wg), mpb.WithRefreshRate(10*time.Millisecond))
 	for _, resource := range f.Resources {
+		// fmt.Printf("File: %s, MD5: %s\n\n", resource.Filename, resource.LFileMD5)
 		f.wg.Add(1)
-		go f.transfer(resource, p)
+		go func(rs Resource) {
+			res := f.transfer(rs, p)
+			result = append(result, res)
+		}(resource)
 	}
 	p.Wait()
 	f.wg.Wait()
+
+	// print filename and md5 value
+	for _, i := range result {
+		fmt.Printf("File: %s, MD5: %s\n", i.Filename, i.LFileMD5)
+	}
 }
 
 func localCopy(conn *ssh.Client, destPath string, lfilePath []string) {
