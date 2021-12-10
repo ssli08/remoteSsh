@@ -7,9 +7,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.10.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.21.0
 	github.com/blacknon/go-sshlib v0.1.3
+	github.com/cheggaaa/pb v1.0.29
 	github.com/extrame/xls v0.0.1
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/gosuri/uiprogress v0.0.1
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/pkg/sftp v1.12.0
 	github.com/schollz/progressbar/v3 v3.8.3
@@ -38,11 +38,9 @@ require (
 	github.com/aws/smithy-go v1.9.0 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
 	github.com/extrame/ole2 v0.0.0-20160812065207-d69429661ad7 // indirect
-	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
@@ -50,5 +48,5 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/sys v0.0.0-20211209171907-798191bca915 // indirect
 )
