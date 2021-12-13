@@ -74,7 +74,7 @@ func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) Resource {
 		if rs.LFileMD5 == rmd5 {
 			// fmt.Printf("same md5 value for [%s] between  Local and Remote\n", rs.Filename)
 			fmt.Printf("Local file (%s) has the same MD5 value as the Remote, nothing to do\n", rs.Filename)
-			return Resource{}
+			return rs
 		} else {
 			fmt.Printf("get different md5 value for [%s] on remote server, start copying..\n", targetFileName)
 			sc.Rename(targetFileName, strings.Join([]string{targetFileName, time.Now().Format("20060102-150405")}, "-"))
