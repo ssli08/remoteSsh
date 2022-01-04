@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sshtunnel/cmd"
 	"sshtunnel/database"
+	"syscall"
 )
 
 const (
@@ -35,8 +36,8 @@ func main() {
 	}
 
 	file := "/tmp/rssh.log"
-
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	syscall.Umask(000)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func Color(colorString string) func(...interface{}) string {
 func instuction() string {
 	m := fmt.Sprintf(`
 	1. grant all privileges on sshServers.* to ssh@'localhost' identified by 'ssh@gs.com' %s
-	2. rssh initdb mysql/sqlite3 %-56s %s
+	2. rssh initdb -h for mysql/sqlite3 initialization %-56s %s
 	3. rssh import jph --jh 2.2.2.2  --jp www.gs.com %-36s %s
 	4. rssh import file -f instances.csv %-48s %s
 	5. rssh import sshkey -k 1.pem -s ssh_user %-42s %s
