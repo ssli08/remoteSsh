@@ -51,6 +51,7 @@ var (
 			public_ip CHAR(64) NOT NULL,
 			private_ip CHAR(64) NOT NULL,
 			instance_type VARCHAR(64),
+			instance_id VARCHAR(128),
 			region TEXT NOT NULL, 
 			latency INT NOT NULL DEFAULT 0,
 			project CHAR(64) NOT NULL, 
@@ -100,6 +101,7 @@ var (
 			public_ip VARCHAR(25) NOT NULL, 
 			private_ip VARCHAR(25) NOT NULL , 
 			instance_type VARCHAR(30),
+			instance_id VARCHAR(128),
 			region VARCHAR(64) NOT NULL , 
 			latency SMALLINT NOT NULL DEFAULT 0,
 			project VARCHAR(64) NOT NULL , 
@@ -139,7 +141,7 @@ var (
 )
 
 func QueryInstancesFromDB(db *sql.DB, project string) []map[string]string {
-	sql := fmt.Sprintf("select instance_name,public_ip,instance_type from %s where project='%s'", InstanceTableName, project)
+	sql := fmt.Sprintf("select instance_name,public_ip,instance_type,instance_id from %s where project='%s'", InstanceTableName, project)
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal("query sql failed with error: ", err)
@@ -150,14 +152,12 @@ func QueryInstancesFromDB(db *sql.DB, project string) []map[string]string {
 	instances := []map[string]string{}
 	for rows.Next() {
 		a := map[string]string{}
-		var instanceName, publicIP, instanceType string
-		rows.Scan(&instanceName, &publicIP, &instanceType)
+		var instanceName, publicIP, instanceType, instanceID string
+		rows.Scan(&instanceName, &publicIP, &instanceType, &instanceID)
 		a["Name"] = instanceName
 		a["PublicIP"] = publicIP
-		// if instanceType == "" {
-		// 	instanceType = "none"
-		// }
 		a["InstanceType"] = instanceType
+		a["InstanceID"] = instanceID
 		instances = append(instances, a)
 	}
 

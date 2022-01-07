@@ -222,6 +222,7 @@ func GetAWSInstances(project, region string) ([]map[string]string, error) {
 				tagIP["PublicIP"] = aws.ToString(instance.PublicIpAddress)
 				tagIP["PrivateIP"] = aws.ToString(instance.PrivateIpAddress)
 				tagIP["InstanceType"] = string(instance.InstanceType)
+				tagIP["InstanceID"] = aws.ToString(instance.InstanceId)
 				tagIP["Region"] = awsRegions[region]
 
 			}
@@ -264,9 +265,9 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 	}
 	for _, instance := range res {
 		sql := fmt.Sprintf(`INSERT INTO instances 
-		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP,INSTANCE_TYPE, REGION, PROJECT,PLATFORM) 
+		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP,INSTANCE_TYPE,INSTANCE_ID, REGION, PROJECT,PLATFORM) 
 		values 
-		('%s','%s','%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["Region"], project, "aws")
+		('%s','%s','%s','%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["InstanceID"], instance["Region"], project, "aws")
 
 		if database.IsRecordExist(db, instance["PublicIP"]) {
 			log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
