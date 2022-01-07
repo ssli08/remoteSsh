@@ -90,11 +90,11 @@ func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, 
 		result := database.QueryInstancesFromDB(db, proj)
 		fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
 
-		fmt.Println(strings.Repeat("-", 95))
-		fmt.Printf("%-45s| %-15s| %10s |%10s|\n", "Name", "PublicIP", "InstanceType", "InstanceID")
+		fmt.Println(strings.Repeat("-", 102))
+		fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
 		for _, i := range result {
-			fmt.Println(strings.Repeat("-", 95))
-			fmt.Printf("%-45s| %-15s| %10s |%10s|\n", i["Name"], i["PublicIP"], i["InstanceType"], i["InstanceID"])
+			fmt.Println(strings.Repeat("-", 102))
+			fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", i["Name"], i["PublicIP"], i["InstanceType"], i["InstanceID"])
 		}
 		fmt.Println()
 		return
