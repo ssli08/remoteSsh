@@ -44,7 +44,8 @@ var importInstanceFromAPICmd = &cobra.Command{
 		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
 
-			modules.ImportAWSInstancesToDB(db, project, region)
+			// modules.ImportAWSInstancesToDB(db, project, region)
+			modules.UpdateInstanceListsInDB(db, project, region)
 			if project == "gdms" {
 				modules.ImportVPSInstancesToDB(db)
 			}

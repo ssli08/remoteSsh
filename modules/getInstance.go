@@ -269,15 +269,25 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 		values 
 		('%s','%s','%s','%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["InstanceID"], instance["Region"], project, "aws")
 
-		if database.IsRecordExist(db, instance["PublicIP"]) {
-			log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
-			sql = fmt.Sprintf("UPDATE instances SET INSTANCE_NAME = '%s' where PUBLIC_IP ='%s';", instance["Name"], instance["PublicIP"])
-		}
+		// if database.IsRecordExist(db, instance["PublicIP"]) {
+		// 	log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
+		// 	sql = fmt.Sprintf("UPDATE instances SET INSTANCE_NAME = '%s' where PUBLIC_IP ='%s';", instance["Name"], instance["PublicIP"])
+		// }
 		if err := database.DBExecute(db, sql); err != nil {
 			log.Fatal(err)
 		}
 	}
 	log.Println("import aws instance to DB successfully.")
+}
+
+// update instance list stored in db
+func UpdateInstanceListsInDB(db *sql.DB, project, region string) {
+	sql := fmt.Sprintf("DELETE FROM instances  WHERE PROJECT = '%s' and REGION = '%s';", project, awsRegions[region])
+	if err := database.DBExecute(db, sql); err != nil {
+		log.Fatal(err)
+	}
+	ImportAWSInstancesToDB(db, project, region)
+	ImportVPSInstancesToDB(db)
 }
 
 // import ssh key to specified db and use `passphrase` as key to encrypt ssh key content

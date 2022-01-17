@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"sshtunnel/cipherText"
 	"sshtunnel/database"
 	"strings"
@@ -88,7 +89,28 @@ func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, 
 
 	if proj != "" && print {
 		result := database.QueryInstancesFromDB(db, proj)
+		sortStrings := make([]string, 0, len(result))
+		for _, v := range result {
+			for k := range v {
+				sortStrings = append(sortStrings, k)
+			}
+
+		}
+		sort.Strings(sortStrings)
 		fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
+		fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
+		for _, k := range sortStrings {
+			for _, m := range result {
+				if _, ok := m[k]; ok {
+					// fmt.Println(k, len(m[k]))
+					fmt.Println(strings.Repeat("-", 102))
+					fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", k, m[k][0], m[k][1], m[k][2])
+				}
+
+			}
+		}
+		return
+		/* fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
 
 		fmt.Println(strings.Repeat("-", 102))
 		fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
@@ -97,7 +119,7 @@ func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, 
 			fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", i["Name"], i["PublicIP"], i["InstanceType"], i["InstanceID"])
 		}
 		fmt.Println()
-		return
+		return */
 	}
 
 	res := ChooseJumperHost(db)
