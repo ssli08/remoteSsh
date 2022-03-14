@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -14,13 +15,7 @@ import (
 
 // var sql = "INSERT INTO instances (instance_name,public_ip,private_ip,region,project) values ('%s','%s','%s','%s','%s')"
 
-func ReadCSV(csvFile string) ([][]string, error) {
-	db, err := database.GetDBConnInfo(database.DatabaseName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
+func ReadCSV(db *sql.DB, csvFile string) ([][]string, error) {
 	f, err := os.Open(csvFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s with error %s only support CSV suffix file", csvFile, err)
@@ -36,15 +31,15 @@ func ReadCSV(csvFile string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println(records)
+
 	for _, data := range records {
 		if strings.Contains(data[1], "instance_name") {
 			continue
 		}
 		sql := fmt.Sprintf(`INSERT INTO %s 
-				(id,instance_name,public_ip,private_ip,region,project,insert_time,role) 
+				(instance_name,public_ip,private_ip,region,project,role,instance_type,instance_id) 
 				values 
-				('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])
+				('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[1], data[2], data[3], data[4], data[6], data[7], data[10], data[11])
 		if err := database.DBExecute(db, sql); err != nil {
 			log.Fatal(err)
 		}
@@ -86,17 +81,12 @@ func WriteCSV(csvFile string, records [][]string) error {
 
 	return nil
 }
-func ReadXLSX(xlsxFile string) error {
-	db, err := database.GetDBConnInfo(database.DatabaseName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
+func ReadXLSX(db *sql.DB, xlsxFile string) error {
 	x, err := xlsx.OpenFile(xlsxFile)
 	if err != nil {
 		return err
 	}
+
 	log.Printf("parsing XLSX file %s, with sheets Num. %d", xlsxFile, len(x.Sheets))
 	res := [][]string{}
 
@@ -135,12 +125,7 @@ func ReadXLSX(xlsxFile string) error {
 	return nil
 }
 
-func ReadXLS(xlsFile, charset string) error {
-	db, err := database.GetDBConnInfo(database.DatabaseName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+func ReadXLS(db *sql.DB, xlsFile, charset string) error {
 	// var res = [][]string{}
 	wb, err := xls.Open(xlsFile, charset)
 	if err != nil {

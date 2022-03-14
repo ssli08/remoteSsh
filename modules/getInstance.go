@@ -164,26 +164,26 @@ func ImportVPSInstancesToDB(db *sql.DB) {
 		if !strings.Contains(strings.ToLower(instance.Label), "test") {
 
 			if strings.Contains(strings.ToLower(instance.Label), "ssh") {
-				sql = fmt.Sprintf(`INSERT INTO instances
+				sql = fmt.Sprintf(`INSERT INTO %s
 				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "ssh", "vps")
+				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "ssh", "vps")
 			} else if strings.Contains(strings.ToLower(instance.Label), "turn") {
-				sql = fmt.Sprintf(`INSERT INTO instances 
+				sql = fmt.Sprintf(`INSERT INTO %s 
 				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn", "vps")
+				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn", "vps")
 			} else {
 				// continue
-				sql = fmt.Sprintf(`INSERT INTO instances 
+				sql = fmt.Sprintf(`INSERT INTO %s 
 				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
 				values 
-				('%s','%s','%s','%s','%s','%s')`, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other", "vps")
+				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other", "vps")
 			}
 
 			if database.IsRecordExist(db, instance.PublicIP) {
 				log.Printf("%s is Exist in db, update its instance name", instance.PublicIP)
-				sql = fmt.Sprintf("UPDATE  instances SET INSTANCE_NAME = '%s' where PUBLIC_IP ='%s';", instance.Label, instance.PublicIP)
+				sql = fmt.Sprintf("UPDATE  %s SET INSTANCE_NAME = '%s' where PUBLIC_IP ='%s';", database.InstanceTableName, instance.Label, instance.PublicIP)
 			}
 
 			if err := database.DBExecute(db, sql); err != nil {
@@ -238,11 +238,9 @@ func GetAWSInstances(project, region string) ([]map[string]string, error) {
 func newEC2Client(project, region string) (*ec2.Client, error) {
 	// about aws credentials refer to https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 	var ec2Client *ec2.Client
-	awsConfig := path.Join(os.Getenv("HOME"), ".aws/config")
+	awsConfig := path.Join(os.Getenv("HOME"), ".aws/credentials")
 	if _, err := os.Stat(awsConfig); !os.IsNotExist(err) {
-		os.Setenv("AWS_PROFILE", strings.Join([]string{project, "account"}, "-"))
-		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
-		// ac := strings.Join([]string{project, ""}, "-")
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile(project), config.WithRegion(region))
 		// cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile(ac))
 		if err != nil {
 			return nil, err
@@ -264,10 +262,10 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 		log.Fatal(err)
 	}
 	for _, instance := range res {
-		sql := fmt.Sprintf(`INSERT INTO instances 
+		sql := fmt.Sprintf(`INSERT INTO %s 
 		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP,INSTANCE_TYPE,INSTANCE_ID, REGION, PROJECT,PLATFORM) 
 		values 
-		('%s','%s','%s','%s','%s','%s','%s','%s')`, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["InstanceID"], instance["Region"], project, "aws")
+		('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["InstanceID"], instance["Region"], project, "aws")
 
 		// if database.IsRecordExist(db, instance["PublicIP"]) {
 		// 	log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
@@ -282,7 +280,7 @@ func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
 
 // update instance list stored in db
 func UpdateInstanceListsInDB(db *sql.DB, project, region string) {
-	sql := fmt.Sprintf("DELETE FROM instances  WHERE PROJECT = '%s' and REGION = '%s';", project, awsRegions[region])
+	sql := fmt.Sprintf("DELETE FROM %s  WHERE PROJECT = '%s' and REGION = '%s';", database.InstanceTableName, project, awsRegions[region])
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)
 	}
@@ -318,9 +316,9 @@ func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_passwo
 	}
 
 	// c := base64.StdEncoding.EncodeToString(econtent)
-	sql := fmt.Sprintf(`INSERT INTO sshkeys (project, privateKey_name, privateKey_content, ssh_user, ssh_port, ssh_password,role) 
+	sql := fmt.Sprintf(`INSERT INTO %s (project, privateKey_name, privateKey_content, ssh_user, ssh_port, ssh_password,role) 
 	values 
-	('%s','%s', '%s', '%s', '%s', '%s','%s')`, project, privateKeyName, eKey, ssh_user, ssh_port, ePass, role)
+	('%s','%s', '%s', '%s', '%s', '%s','%s')`, database.SSHKeyTableName, project, privateKeyName, eKey, ssh_user, ssh_port, ePass, role)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)
@@ -346,7 +344,7 @@ func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_passwo
 // decrypted program:
 // [encyptedString --> base64 decode --> decrypted --> return (ssh_user,private_key)]
 func GetSSHKey(db *sql.DB, project, passphrase string) SSHKeyInfo {
-	sql := fmt.Sprintf("SELECT privateKey_name,ssh_user, privateKey_content, ssh_password FROM sshkeys WHERE project='%s'", project)
+	sql := fmt.Sprintf("SELECT privateKey_name,ssh_user, privateKey_content, ssh_password FROM %s WHERE project='%s'", database.SSHKeyTableName, project)
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal("query sql failed with error: ", err)
@@ -382,9 +380,9 @@ func ImportJumperHosts(db *sql.DB, jumpHost, jumpUser, jumpPass, jumpPort, passp
 	if err != nil {
 		log.Fatal(err)
 	}
-	sql := fmt.Sprintf(`INSERT INTO jumperHosts (jmphost, jmpuser, jmppass, jmpport)
+	sql := fmt.Sprintf(`INSERT INTO %s (jmphost, jmpuser, jmppass, jmpport)
 	values
-	('%s','%s','%s','%s')`, jumpHost, jumpUser, pass, jumpPort)
+	('%s','%s','%s','%s')`, database.JumpHostsTableName, jumpHost, jumpUser, pass, jumpPort)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)

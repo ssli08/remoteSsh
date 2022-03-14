@@ -338,6 +338,9 @@ func GetDBConnInfo(dbname string) (*sql.DB, error) {
 	if err := d.Decode(&conn); err != nil {
 		return nil, err
 	}
+	if conn.DBPort == "" {
+		conn.DBPort = "3306"
+	}
 	if conn.DBFile == "" {
 		if db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", conn.DBUser, conn.DBPass, conn.DBHost, conn.DBPort, dbname)); err != nil {
 			return nil, fmt.Errorf("init mysql driver failed with error %s", err)

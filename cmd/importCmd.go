@@ -44,6 +44,11 @@ var importInstanceFromAPICmd = &cobra.Command{
 		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
 
+			// truncate currently exist instance table
+			// if err := database.DBExecute(db, fmt.Sprintf("truncate table %s", database.InstanceTableName)); err != nil {
+			// 	log.Fatal(err)
+			// }
+
 			// modules.ImportAWSInstancesToDB(db, project, region)
 			modules.UpdateInstanceListsInDB(db, project, region)
 			if project == "gdms" {
@@ -63,21 +68,32 @@ var importInstanceFromFileCmd = &cobra.Command{
 			cmd.Help()
 			return
 		}
-		switch filepath.Ext(instanceFile) {
-		case ".xls":
-			if err := modules.ReadXLS(instanceFile, "utf8"); err != nil {
+		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
+			defer db.Close()
+
+			// truncate currently exist instance table
+			if err := database.DBExecute(db, fmt.Sprintf("truncate table %s", database.InstanceTableName)); err != nil {
 				log.Fatal(err)
 			}
-		case ".xlsx":
-			if err := modules.ReadXLSX(instanceFile); err != nil {
-				log.Fatal(err)
+
+			switch filepath.Ext(instanceFile) {
+			case ".xls":
+				if err := modules.ReadXLS(db, instanceFile, "utf8"); err != nil {
+					log.Fatal(err)
+				}
+			case ".xlsx":
+				if err := modules.ReadXLSX(db, instanceFile); err != nil {
+					log.Fatal(err)
+				}
+			case ".csv":
+				if _, err := modules.ReadCSV(db, instanceFile); err != nil {
+					log.Fatal(err)
+				}
+			default:
+				log.Fatalf("can NOT recognise %s with Extension (%s)", instanceFile, filepath.Ext(instanceFile))
 			}
-		case ".csv":
-			if _, err := modules.ReadCSV(instanceFile); err != nil {
-				log.Fatal(err)
-			}
-		default:
-			log.Fatalf("can NOT recognise %s with Extension (%s)", instanceFile, filepath.Ext(instanceFile))
+		} else {
+			log.Fatal(err)
 		}
 	},
 }
