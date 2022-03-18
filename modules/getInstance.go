@@ -197,7 +197,7 @@ func ImportVPSInstancesToDB(db *sql.DB) {
 func GetAWSInstances(project, region string) ([]map[string]string, error) {
 	client, err := newEC2Client(project, region)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	input := ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
@@ -291,7 +291,7 @@ func UpdateInstanceListsInDB(db *sql.DB, project, region string) {
 // import ssh key to specified db and use `passphrase` as key to encrypt ssh key content
 // encrypt program:
 // [string --> encrypted --> base64 encode --> db]
-func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_password, role, passphrase string) {
+func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_password, passphrase string) {
 	var ePass, eKey, project, privateKeyName string
 	var err error
 	// encrypted ssh password
@@ -316,9 +316,9 @@ func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_passwo
 	}
 
 	// c := base64.StdEncoding.EncodeToString(econtent)
-	sql := fmt.Sprintf(`INSERT INTO %s (project, privateKey_name, privateKey_content, ssh_user, ssh_port, ssh_password,role) 
+	sql := fmt.Sprintf(`INSERT INTO %s (project, privateKey_name, privateKey_content, ssh_user, ssh_port, ssh_password) 
 	values 
-	('%s','%s', '%s', '%s', '%s', '%s','%s')`, database.SSHKeyTableName, project, privateKeyName, eKey, ssh_user, ssh_port, ePass, role)
+	('%s','%s', '%s', '%s', '%s', '%s')`, database.SSHKeyTableName, project, privateKeyName, eKey, ssh_user, ssh_port, ePass)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)

@@ -140,8 +140,14 @@ var (
 	DBConFile = path.Join(os.Getenv("HOME"), ".db.ini")
 )
 
-func QueryInstancesFromDB(db *sql.DB, project string) []map[string][]string {
-	sql := fmt.Sprintf("select instance_name,public_ip,instance_type,instance_id from %s where project='%s'", InstanceTableName, project)
+func QueryInstancesFromDB(db *sql.DB, project, role string) []map[string]string {
+	sql := ""
+	if role == "" {
+		sql = fmt.Sprintf("select instance_name,public_ip,instance_type,instance_id from %s where project='%s'", InstanceTableName, project)
+	} else {
+		sql = fmt.Sprintf("select instance_name,public_ip,instance_type,instance_id from %s where project='%s' and role='%s'", InstanceTableName, project, role)
+	}
+
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal("query sql failed with error: ", err)
@@ -150,22 +156,22 @@ func QueryInstancesFromDB(db *sql.DB, project string) []map[string][]string {
 
 	// fmt.Printf("%s server list: \n\n", project)
 	// instances := []map[string]string{}
-	instances := []map[string][]string{}
+	instances := []map[string]string{}
 	for rows.Next() {
-		a := map[string][]string{}
+		a := map[string]string{}
 		var instanceName, publicIP, instanceType, instanceID string
 		rows.Scan(&instanceName, &publicIP, &instanceType, &instanceID)
 		// fmt.Println(rows.Columns())
-		// a["Name"] = instanceName
-		// a["PublicIP"] = publicIP
-		// a["InstanceType"] = instanceType
-		// a["InstanceID"] = instanceID
-		// instances = append(instances, a)
-		if _, ok := a[instanceName]; !ok {
-			a[instanceName] = append(a[instanceName], publicIP, instanceType, instanceID)
-
-		}
+		a["Name"] = instanceName
+		a["PublicIP"] = publicIP
+		a["InstanceType"] = instanceType
+		a["InstanceID"] = instanceID
 		instances = append(instances, a)
+		// if _, ok := a[instanceName]; !ok {
+		// 	a[instanceName] = append(a[instanceName], publicIP, instanceType, instanceID)
+
+		// }
+		// instances = append(instances, a)
 
 	}
 
@@ -414,13 +420,4 @@ func ExportTableTOCSVFile(db *sql.DB, tablename string) {
 	}
 	w.Flush()
 	fmt.Println("Finished writing to:", file)
-}
-
-// print json format content
-func JsonOutput(data interface{}) (string, error) {
-	res, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		return "", fmt.Errorf("json data output error %s", err)
-	}
-	return string(res), nil
 }

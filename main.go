@@ -7,28 +7,15 @@ import (
 	"runtime"
 	"sshtunnel/cmd"
 	"sshtunnel/database"
+	"sshtunnel/modules"
 	"syscall"
 )
 
-const (
-	InfoColor    = "\033[1;34m%s\033[0m"
-	NoticeColor  = "\033[1;36m%s\033[0m"
-	WarningColor = "\033[1;33m%s\033[0m"
-	ErrorColor   = "\033[1;31m%s\033[0m"
-	DebugColor   = "\033[0;36m%s\033[0m"
-)
+var Purple = modules.Purple
 
-var (
-	Black   = Color("\033[1;30m%s\033[0m")
-	Red     = Color("\033[1;31m%s\033[0m")
-	Green   = Color("\033[1;32m%s\033[0m")
-	Yellow  = Color("\033[1;33m%s\033[0m")
-	Purple  = Color("\033[1;34m%s\033[0m")
-	Magenta = Color("\033[1;35m%s\033[0m")
-	Teal    = Color("\033[1;36m%s\033[0m")
-	White   = Color("\033[1;37m%s\033[0m")
-)
+func mainA() {
 
+}
 func main() {
 
 	if runtime.GOOS == "windows" {
@@ -55,14 +42,6 @@ func main() {
 	cmd.Execute()
 	// modules.MultiProgressBarPresentation(500, 10)
 
-}
-
-func Color(colorString string) func(...interface{}) string {
-	sprint := func(args ...interface{}) string {
-		return fmt.Sprintf(colorString,
-			fmt.Sprint(args...))
-	}
-	return sprint
 }
 
 func instuction() string {

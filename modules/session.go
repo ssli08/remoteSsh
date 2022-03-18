@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"io"
@@ -71,12 +72,19 @@ type Connect struct {
 	logFile string */
 }
 
+type cmdOutput struct {
+	hostname string
+	ip       string
+	stde     bytes.Buffer
+	stdo     bytes.Buffer
+}
+
 const (
 	Passcode = "passcode" // used to encrypt/decrypt password or private key
 )
 
 // InitSession session
-func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, rmtUser, rmtPass string, fileList []string) {
+func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtPort, rmtUser, rmtPass string, cmdlist, fileList []string) {
 
 	// Ctrl^C  handling in ssh session
 	// https://unix.stackexchange.com/questions/102061/ctrl-c-handling-in-ssh-session
@@ -86,75 +94,108 @@ func InitSession(print, fcopy, directly bool, proj, destPath, rmtHost, rmtPort, 
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	if proj != "" && print {
-		result := database.QueryInstancesFromDB(db, proj)
-		sortStrings := make([]string, 0, len(result))
-		for _, v := range result {
-			for k := range v {
-				sortStrings = append(sortStrings, k)
-			}
-
-		}
-		sort.Strings(sortStrings)
-		fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
-		fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
-		for _, k := range sortStrings {
-			for _, m := range result {
-				if _, ok := m[k]; ok {
-					// fmt.Println(k, len(m[k]))
-					fmt.Println(strings.Repeat("-", 102))
-					fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", k, m[k][0], m[k][1], m[k][2])
-				}
-
-			}
-		}
-		return
-		/* fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
-
-		fmt.Println(strings.Repeat("-", 102))
-		fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
-		for _, i := range result {
-			fmt.Println(strings.Repeat("-", 102))
-			fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", i["Name"], i["PublicIP"], i["InstanceType"], i["InstanceID"])
-		}
-		fmt.Println()
-		return */
-	}
-
 	res := ChooseJumperHost(db)
-	if rmtHost != "" {
-		if proj != "" {
-			var privateKey string
-			sshinfo := GetSSHKey(db, proj, Passcode)
-			switch filepath.Ext(sshinfo.PrivateKeyName) {
-			case ".pass":
-				rmtUser = sshinfo.SSHUser
-				// privateKey = ""
-				rmtPass = sshinfo.PrivateKeyContent
-			case ".pem":
-				rmtUser = sshinfo.SSHUser
-				// rmtPass = ""
-				privateKey = sshinfo.PrivateKeyContent
-			default:
-				fmt.Printf("no ssh_key/password record found for %s (PROJECT %s) in DB `sshkeys`, use your input pass instead\n", rmtHost, proj)
-				// return
-			}
-			makeProxyHost(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, fcopy, fileList)
-		} else {
-			fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", rmtHost)
-			// makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
-			makeDirectSSH(rmtHost, rmtUser, rmtPass, rmtPort, proj, destPath, fcopy, fileList)
-		}
-	} else {
-		fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
-		makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
-	}
+	if proj != "" {
+		if print {
+			result := database.QueryInstancesFromDB(db, proj, "")
+			sortStrings := make([]string, 0, len(result))
+			for _, v := range result {
+				sortStrings = append(sortStrings, v["Name"])
+				// for k := range v {
+				// 	sortStrings = append(sortStrings, k)
+				// }
 
+			}
+			sort.Strings(sortStrings)
+			fmt.Printf("\n%s Server [Total Count: %d] List: \n\n", strings.ToUpper(proj), len(result))
+			fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", "Name", "PublicIP", "InstanceType", "InstanceID")
+			for _, k := range sortStrings {
+				for _, m := range result {
+					if m["Name"] == k {
+						// fmt.Println(m)
+						fmt.Println(strings.Repeat("-", 102))
+						fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", k, m["PublicIP"], m["InstanceType"], m["InstanceID"])
+					}
+					// if _, ok := m[k]; ok {
+					// 	// fmt.Println(k, len(m[k]))
+					// 	fmt.Println(strings.Repeat("-", 102))
+					// 	fmt.Printf("%-45s| %-15s| %-15s |%15s |\n", k, m[k][0], m[k][1], m[k][2])
+					// }
+
+				}
+			}
+			return
+		}
+
+		var privateKey string
+		sshinfo := GetSSHKey(db, proj, Passcode)
+		switch filepath.Ext(sshinfo.PrivateKeyName) {
+		case ".pass":
+			rmtUser = sshinfo.SSHUser
+			// privateKey = ""
+			rmtPass = sshinfo.PrivateKeyContent
+		case ".pem":
+			rmtUser = sshinfo.SSHUser
+			// rmtPass = ""
+			privateKey = sshinfo.PrivateKeyContent
+		default:
+			fmt.Printf("no ssh_key/password record found for %s (PROJECT %s) in DB `sshkeys`, use your input pass instead\n", rmtHost, proj)
+			// return
+		}
+
+		// if rmtHost != "" {
+		// 	makeProxyHost(
+		// 		res.JmpHost,
+		// 		res.JmpUser,
+		// 		res.JmpPass,
+		// 		res.JmpPort,
+		// 		rmtHost,
+		// 		rmtPort,
+		// 		rmtUser,
+		// 		rmtPass,
+		// 		privateKey,
+		// 		proj,
+		// 		destPath,
+		// 		role,
+		// 		command,
+		// 		fcopy,
+		// 		cmdlist,
+		// 		fileList)
+		// }
+		makeProxyHost(
+			res.JmpHost,
+			res.JmpUser,
+			res.JmpPass,
+			res.JmpPort,
+			rmtHost,
+			rmtPort,
+			rmtUser,
+			rmtPass,
+			privateKey,
+			proj,
+			destPath,
+			role,
+			command,
+			fcopy,
+			cmdlist,
+			fileList)
+
+	} else {
+		fmt.Printf("lack of `-project` parameter, will connect to Jump server %s directly\n", rmtHost)
+
+		if rmtHost == "" {
+			fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
+			makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
+			return
+		}
+		// makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
+		makeDirectSSH(rmtHost, rmtUser, rmtPass, rmtPort, proj, destPath, fcopy, fileList)
+	}
 	// network connection quality check
 	// networkdetect.LatencyTest("52.83.235.118", 26222)
 }
 
+// get the low latency jump host used to connect the backend server
 func ChooseJumperHost(db *sql.DB) database.QueryJumperHosts {
 	sql := "select jmphost from jumperHosts where latency=(select MIN(latency) from jumperHosts)"
 	minLatencyJmpHosts := database.QueryKeywordFromDB(db, sql)
@@ -253,7 +294,7 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj, destPath string, fc
 	}
 }
 
-func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath string, fcopy bool, fileList []string) {
+func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, role string, command, fcopy bool, cmdList, fileList []string) {
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 
 	proxyConn := Connect{}
@@ -266,27 +307,112 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 		ProxyDialer: proxyConn.Client,
 	}
 
-	remoteHost := net.JoinHostPort(rmtHost, rmtPort)
+	// remoteHost := net.JoinHostPort(rmtHost, rmtPort)
 
-	err = targetConn.createClient(remoteHost, rmtUser, rmtPass, privateKey, proj)
-	if err != nil {
-		// log.Fatal("remote host connect failed with error: ", err)
-		fmt.Printf("failed to connect remote Host %s with error %s\n", remoteHost, err)
-		os.Exit(1)
-	}
+	// err = targetConn.createClient(remoteHost, rmtUser, rmtPass, privateKey, proj)
+	// if err != nil {
+	// 	fmt.Printf("failed to connect remote Host %s with error %s\n", remoteHost, err)
+	// 	os.Exit(1)
+	// }
 
-	// if filename == "" {
-	if !fcopy {
-		session, err := targetConn.Client.NewSession()
+	if role != "" {
+		db, err := database.GetDBConnInfo(database.DatabaseName)
 		if err != nil {
-			log.Fatal("new remote host session failed with error: ", err)
+			log.Fatal(err)
 		}
-		defer session.Close()
-		targetConn.xShell(session)
-		// linuxShell(session)
+		hostinfo := database.QueryInstancesFromDB(db, proj, role)
+		ch := make(chan cmdOutput, len(hostinfo))
+
+		if command {
+			cmd := strings.Join(cmdList, " ")
+			for _, host := range hostinfo {
+				go func(hostname, ip, c string, cha chan cmdOutput) {
+					var res cmdOutput
+
+					err = targetConn.createClient(net.JoinHostPort(ip, rmtPort), rmtUser, rmtPass, privateKey, proj)
+					if err != nil {
+						fmt.Printf("failed to connect remote Host %s with error %s\n", ip, err)
+						os.Exit(1)
+					}
+					session, err := targetConn.Client.NewSession()
+					if err != nil {
+						fmt.Printf("launch new session for %s failed with error %s in cmd excution\n", ip, err)
+						os.Exit(1)
+
+					}
+					defer session.Close()
+					res.hostname = hostname
+					res.ip = ip
+					session.Stdout = &res.stdo
+					session.Stderr = &res.stde
+					if err = session.Run(cmd); err != nil {
+						fmt.Printf("run cmd (%s) failed on %s with error %s\n", cmd, ip, err)
+						os.Exit(1)
+					}
+
+					cha <- res
+
+				}(host["Name"], host["PublicIP"], cmd, ch)
+			}
+			for range hostinfo {
+				res := <-ch
+				fmt.Printf("{\n\tHost: %s \n", Green(strings.Join([]string{res.hostname, res.ip}, "-")))
+				if res.stde.String() == "" {
+					fmt.Printf("\tStatus: %s\n", Green("SUCCESS"))
+					fmt.Printf("\tResult: %20s", res.stdo.String())
+				} else {
+					fmt.Printf("\tStatus: %s\n", Red("FAILED"))
+					fmt.Printf("\tResult: %s\n", res.stde.String())
+				}
+				fmt.Printf("}\n")
+				fmt.Printf("\n\n")
+			}
+		} else if fcopy {
+			for _, host := range hostinfo {
+				err = targetConn.createClient(net.JoinHostPort(host["PublicIP"], rmtPort), rmtUser, rmtPass, privateKey, proj)
+				if err != nil {
+					fmt.Printf("failed to connect remote Host %s with error %s\n", host["PublicIP"], err)
+					os.Exit(1)
+				}
+				localCopy(targetConn.Client, destPath, fileList)
+			}
+		} else {
+			fmt.Printf("Add %s to execute cmd or %s to copy file after the currently present args\n\n", Green("-c"), Green("-f"))
+			if len(hostinfo) == 0 {
+				sql := fmt.Sprintf("select distinct(role) from %s", database.InstanceTableName)
+
+				fmt.Printf("role %s not found, refer to available role list: %s\n", Green(role), database.QueryKeywordFromDB(db, sql))
+				os.Exit(1)
+			}
+			fmt.Printf("project %s's %s instances:\n", Green(proj), Green(role))
+			for _, host := range hostinfo {
+				fmt.Printf("\t%s\t%s\n", host["Name"], host["PublicIP"])
+			}
+		}
+
 	} else {
-		// localCopy(targetConn.Client, filename)
-		localCopy(targetConn.Client, destPath, fileList)
+		if rmtHost == "" {
+			fmt.Printf("%s no remoteHost provided to be connected, add %s/%s to get/connnect instance (list)\n", Red("Error:"), Green("-s"), Green("-r"))
+			os.Exit(1)
+		}
+		remoteHost := net.JoinHostPort(rmtHost, rmtPort)
+		err = targetConn.createClient(remoteHost, rmtUser, rmtPass, privateKey, proj)
+		if err != nil {
+			fmt.Printf("failed to connect remote Host %s with error %s\n", remoteHost, err)
+			os.Exit(1)
+		}
+
+		if fcopy {
+			localCopy(targetConn.Client, destPath, fileList)
+		} else {
+			session, err := targetConn.Client.NewSession()
+			if err != nil {
+				log.Fatal("new remote host session failed with error: ", err)
+			}
+			defer session.Close()
+			targetConn.xShell(session)
+			// linuxShell(session)
+		}
 	}
 
 }

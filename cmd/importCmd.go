@@ -18,7 +18,7 @@ var (
 	region                    string
 	keyFile, sshUser, sshPort string // for sshkey importing
 	sshPassword               string // for ssh password importing
-	role                      string // jumperHost or realBackendHost
+	// role                      string // jumperHost or realBackendHost
 
 	jumpHost, jumpUser, jumpPass, jumpPort string
 
@@ -110,7 +110,7 @@ var importSSHKeysCmd = &cobra.Command{
 
 		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
-			modules.ImportSSHAuthentication(db, keyFile, sshUser, sshPort, sshPassword, role, modules.Passcode)
+			modules.ImportSSHAuthentication(db, keyFile, sshUser, sshPort, sshPassword, modules.Passcode)
 		} else {
 			log.Fatal(err)
 		}

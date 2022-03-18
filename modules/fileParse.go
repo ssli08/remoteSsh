@@ -36,10 +36,11 @@ func ReadCSV(db *sql.DB, csvFile string) ([][]string, error) {
 		if strings.Contains(data[1], "instance_name") {
 			continue
 		}
+		// fmt.Println(data)
 		sql := fmt.Sprintf(`INSERT INTO %s 
-				(instance_name,public_ip,private_ip,region,project,role,instance_type,instance_id) 
+				(instance_name,public_ip,private_ip,instance_type,instance_id,region,project,role) 
 				values 
-				('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[1], data[2], data[3], data[4], data[6], data[7], data[10], data[11])
+				('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, data[1], data[2], data[3], data[4], data[5], data[6], data[8], data[11])
 		if err := database.DBExecute(db, sql); err != nil {
 			log.Fatal(err)
 		}
