@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/tealeg/xlsx v1.0.5
 	github.com/vbauerster/mpb/v7 v7.2.0
-	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
+	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 )
@@ -48,5 +48,5 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
-	golang.org/x/sys v0.0.0-20211209171907-798191bca915 // indirect
+	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 )

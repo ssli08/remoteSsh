@@ -322,12 +322,17 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 		}
 		hostinfo := database.QueryInstancesFromDB(db, proj, role)
 		ch := make(chan cmdOutput, len(hostinfo))
+		// ch := make(chan cmdOutput)
 
 		if command {
+			// var wg sync.WaitGroup
 			cmd := strings.Join(cmdList, " ")
+
 			for _, host := range hostinfo {
-				go func(hostname, ip, c string, cha chan cmdOutput) {
+				// wg.Add(1)
+				go func(hostname, ip, c string) {
 					var res cmdOutput
+					// defer wg.Done()
 
 					err = targetConn.createClient(net.JoinHostPort(ip, rmtPort), rmtUser, rmtPass, privateKey, proj)
 					if err != nil {
@@ -346,13 +351,17 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 					session.Stdout = &res.stdo
 					session.Stderr = &res.stde
 					if err = session.Run(cmd); err != nil {
-						fmt.Printf("run cmd (%s) failed on %s with error %s\n", cmd, ip, err)
-						os.Exit(1)
+						switch e := err.(type) {
+						case *ssh.ExitError:
+							log.Printf("run cmd (%s) failed on %s with error %s\n", cmd, ip, e.Waitmsg)
+						case *ssh.ExitMissingError:
+							log.Printf("run cmd (%s) failed on %s with error %s\n", cmd, ip, e.Error())
+						default:
+							log.Printf("run cmd (%s) failed on %s with error %s (%s)", cmd, ip, e, res.stde.String())
+						}
 					}
-
-					cha <- res
-
-				}(host["Name"], host["PublicIP"], cmd, ch)
+					ch <- res
+				}(host["Name"], host["PublicIP"], cmd)
 			}
 			for range hostinfo {
 				res := <-ch
@@ -364,9 +373,23 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser
 					fmt.Printf("\tStatus: %s\n", Red("FAILED"))
 					fmt.Printf("\tResult: %s\n", res.stde.String())
 				}
-				fmt.Printf("}\n")
-				fmt.Printf("\n\n")
+				fmt.Printf("}\n\n")
 			}
+			/*
+				// another way to implement that reading data from zero length channnel `ch`
+					go func() { wg.Wait(); close(ch) }()
+					for res := range ch {
+						fmt.Printf("{\n\tHost: %s \n", Green(strings.Join([]string{res.hostname, res.ip}, "-")))
+						if res.stde.String() == "" {
+							fmt.Printf("\tStatus: %s\n", Green("SUCCESS"))
+							fmt.Printf("\tResult: %20s", res.stdo.String())
+						} else {
+							fmt.Printf("\tStatus: %s\n", Red("FAILED"))
+							fmt.Printf("\tResult: %s\n", res.stde.String())
+						}
+						fmt.Printf("}\n")
+					}
+			*/
 		} else if fcopy {
 			for _, host := range hostinfo {
 				err = targetConn.createClient(net.JoinHostPort(host["PublicIP"], rmtPort), rmtUser, rmtPass, privateKey, proj)
@@ -447,7 +470,6 @@ func (c *Connect) createClient(host, user, password, privateKey, proj string) (e
 
 	// Create *ssh.Client
 	c.Client = ssh.NewClient(sshCon, channel, req)
-
 	return
 }
 
