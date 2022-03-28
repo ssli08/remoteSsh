@@ -25,6 +25,7 @@ import (
 	"os"
 	"runtime"
 	"sshtunnel/database"
+	"sshtunnel/modules"
 	"strconv"
 	"strings"
 	"sync"
@@ -357,7 +358,8 @@ func UpdateJumperHostLatency(db *sql.DB, port uint16) {
 		go func(jmphost string) {
 			defer wg.Done()
 			tcpLatency := LatencyTest(jmphost, port)
-			icmpLatency, err := ICMPPingLatency(jmphost)
+			latency := tcpLatency
+			/* icmpLatency, err := ICMPPingLatency(jmphost)
 			if err != nil {
 				log.Println(err)
 			}
@@ -367,7 +369,8 @@ func UpdateJumperHostLatency(db *sql.DB, port uint16) {
 				latency = icmpLatency
 			} else {
 				latency = tcpLatency
-			}
+			} */
+			fmt.Printf("RTT time for %s is %s \n", modules.Green(jmphost), modules.Green(latency))
 			sql := fmt.Sprintf("update jumperHosts set latency='%s' where jmphost='%s'", latency, jmphost)
 			if err := database.DBExecute(db, sql); err != nil {
 				log.Fatal(err)
@@ -375,4 +378,10 @@ func UpdateJumperHostLatency(db *sql.DB, port uint16) {
 		}(jmphost)
 	}
 	wg.Wait()
+}
+func ResetRTT(db *sql.DB) {
+	if err := database.DBExecute(db, "update jumperHosts set latency='0';"); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Reset RTT time for jump host %s\n", modules.Green("SUCCESS"))
 }
