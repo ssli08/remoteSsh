@@ -166,6 +166,7 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 			res.JmpHost,
 			res.JmpUser,
 			res.JmpPass,
+			res.JmpKey,
 			res.JmpPort,
 			rmtHost,
 			rmtPort,
@@ -185,11 +186,11 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 
 		if rmtHost == "" {
 			fmt.Printf("no `rmtHost` parameter specified, connect to Jump server %s directly\n", res.JmpHost)
-			makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
+			makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpKey, res.JmpPort, proj, destPath, fcopy, fileList)
 			return
 		}
 		// makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
-		makeDirectSSH(rmtHost, rmtUser, rmtPass, rmtPort, proj, destPath, fcopy, fileList)
+		makeDirectSSH(rmtHost, rmtUser, rmtPass, "", rmtPort, proj, destPath, fcopy, fileList)
 	}
 	// network connection quality check
 	// networkdetect.LatencyTest("52.83.235.118", 26222)
@@ -197,6 +198,11 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 
 // get the low latency jump host used to connect the backend server
 func ChooseJumperHost(db *sql.DB) database.QueryJumperHosts {
+	var (
+		jpass, jkey []byte
+		err         error
+	)
+
 	sql := "select jmphost from jumperHosts where latency=(select MIN(latency) from jumperHosts)"
 	minLatencyJmpHosts := database.QueryKeywordFromDB(db, sql)
 	if len(minLatencyJmpHosts) == 0 {
@@ -204,11 +210,22 @@ func ChooseJumperHost(db *sql.DB) database.QueryJumperHosts {
 	}
 	log.Println("min latency jump host", minLatencyJmpHosts)
 	res := database.GetJumperHostsInfo(db, minLatencyJmpHosts[0])
-	pass, err := cipherText.DecryptData(res.JmpPass, Passcode)
-	if err != nil {
-		log.Fatal(err)
+	if res.JmpPass != "" {
+		jpass, err = cipherText.DecryptData(res.JmpPass, Passcode)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-	res.JmpPass = string(pass)
+
+	if res.JmpKey != "" {
+		jkey, err = cipherText.DecryptData(res.JmpKey, Passcode)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	res.JmpKey = string(jkey)
+	res.JmpPass = string(jpass)
 	return res
 }
 
@@ -267,10 +284,10 @@ func linuxShell(session *ssh.Session) {
 		log.Fatalf("return error: %s", err)
 	}
 }
-func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj, destPath string, fcopy bool, fileList []string) {
+func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, proj, destPath string, fcopy bool, fileList []string) {
 	// make client
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
-	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, "", proj, 20)
+	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, jmpkey, proj, 20)
 	client, err := ssh.Dial("tcp", jumpHost, &sshConfig)
 
 	if err != nil {
@@ -294,11 +311,11 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpPort, proj, destPath string, fc
 	}
 }
 
-func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, role string, command, fcopy bool, cmdList, fileList []string) {
+func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, rmtHost, rmtPort, rmtUser, rmtPass, privateKey, proj, destPath, role string, command, fcopy bool, cmdList, fileList []string) {
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 
 	proxyConn := Connect{}
-	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, privateKey, proj)
+	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, jmpkey, proj)
 	if err != nil {
 		log.Fatal("failed to connect jumper host with error: ", err)
 	}

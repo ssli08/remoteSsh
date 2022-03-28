@@ -375,14 +375,33 @@ func GetSSHKey(db *sql.DB, project, passphrase string) SSHKeyInfo {
 }
 
 // import jumper host info to db
-func ImportJumperHosts(db *sql.DB, jumpHost, jumpUser, jumpPass, jumpPort, passphrase string) {
-	pass, err := cipherText.EncryptData([]byte(jumpPass), passphrase)
-	if err != nil {
-		log.Fatal(err)
+func ImportJumperHosts(db *sql.DB, jumpHost, jumpUser, jumpPass, jumpKeyFile, jumpPort, passphrase string) {
+	var (
+		jPass, jKey string
+		err         error
+	)
+	if jumpPass != "" {
+		jPass, err = cipherText.EncryptData([]byte(jumpPass), passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-	sql := fmt.Sprintf(`INSERT INTO %s (jmphost, jmpuser, jmppass, jmpport)
+	// encrypted key
+	if jumpKeyFile != "" {
+
+		buf, err := os.ReadFile(jumpKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		jKey, err = cipherText.EncryptData(buf, passphrase)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	sql := fmt.Sprintf(`INSERT INTO %s (jmphost, jmpuser, jmppass,jmpkey, jmpport)
 	values
-	('%s','%s','%s','%s')`, database.JumpHostsTableName, jumpHost, jumpUser, pass, jumpPort)
+	('%s','%s','%s','%s','%s')`, database.JumpHostsTableName, jumpHost, jumpUser, jPass, jKey, jumpPort)
 
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)

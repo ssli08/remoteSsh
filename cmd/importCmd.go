@@ -20,7 +20,7 @@ var (
 	sshPassword               string // for ssh password importing
 	// role                      string // jumperHost or realBackendHost
 
-	jumpHost, jumpUser, jumpPass, jumpPort string
+	jumpHost, jumpUser, jumpPass, jumpKeyFile, jumpPort string
 
 	expTableName string // used to export db table record to csv file
 )
@@ -102,7 +102,7 @@ var importSSHKeysCmd = &cobra.Command{
 	Short: "import sshkey to DB from keyfile",
 	Run: func(cmd *cobra.Command, args []string) {
 		if keyFile == "" && sshPassword == "" {
-			fmt.Println("keyFile or sshPassword need to be provided!!")
+			fmt.Println(modules.Red("Error: keyFile or sshPassword need to be provided!!"))
 			cmd.Help()
 			return
 		}
@@ -152,7 +152,7 @@ var importJumpHostCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 			defer db.Close()
-			modules.ImportJumperHosts(db, jumpHost, jumpUser, jumpPass, jumpPort, modules.Passcode)
+			modules.ImportJumperHosts(db, jumpHost, jumpUser, jumpPass, jumpKeyFile, jumpPort, modules.Passcode)
 		} else {
 			log.Fatalf("%s not exist or not readable", database.DBConFile)
 		}
@@ -204,10 +204,11 @@ func init() {
 	// importSSHPasswdCmd.Flags().StringVarP(&sshUser, "su", "u", "", "import ssh user to DB")
 	// importSSHPasswdCmd.Flags().StringVarP(&project, "proj", "j", "", "import consistent ssh password to DB for same project")
 
-	importJumpHostCmd.Flags().StringVar(&jumpHost, "jh", "", "jump host need to import db")
-	importJumpHostCmd.Flags().StringVar(&jumpUser, "ju", "ec2-user", "jump host ssh user need to import db")
-	importJumpHostCmd.Flags().StringVar(&jumpPass, "jp", "", "jump host ssh password need to import db")
-	importJumpHostCmd.Flags().StringVar(&jumpPort, "jport", "26222", "jump host ssh port need to import db")
+	importJumpHostCmd.Flags().StringVar(&jumpHost, "jh", "", "import jumpHost ip to  db")
+	importJumpHostCmd.Flags().StringVar(&jumpUser, "ju", "ec2-user", "import jumpHost ssh user to  db")
+	importJumpHostCmd.Flags().StringVar(&jumpPass, "jp", "", "import jumpHost ssh password to db")
+	importJumpHostCmd.Flags().StringVar(&jumpKeyFile, "jpk", "", "import jumpHost ssh privateKey file to db")
+	importJumpHostCmd.Flags().StringVar(&jumpPort, "jport", "26222", "import jumpHost ssh port to db")
 
 	exportDBTableToFileCmd.Flags().StringVarP(&expTableName, "exptabname", "t", "", "exported database table name")
 }

@@ -31,6 +31,7 @@ type QueryJumperHosts struct {
 	JmpHost string
 	JmpUser string
 	JmpPass string
+	JmpKey  string
 	JmpPort string
 }
 
@@ -74,7 +75,8 @@ var (
 	sqlite3InitJumperHostsTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (
 		jmphost VARCHAR(25) NOT NULL,
 		jmpuser VARCHAR(25) NOT NULL,
-		jmppass VARCHAR(200) NOT NULL,
+		jmppass VARCHAR(200),
+		jmpkey TEXT,
 		jmpport VARCHAR(25) NOT NULL DEFAULT 26222,
 		latency INT NOT NULL DEFAULT 0,
 		insert_time  NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -128,7 +130,8 @@ var (
 		id BIGINT(20) NOT NULL auto_increment,
 		jmphost VARCHAR(25) NOT NULL,
 		jmpuser VARCHAR(25) NOT NULL,
-		jmppass VARCHAR(200) NOT NULL,
+		jmppass VARCHAR(200),
+		jmpkey TEXT,
 		jmpport VARCHAR(25) NOT NULL DEFAULT 26222,
 		latency SMALLINT NOT NULL DEFAULT 0,
 		insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -196,7 +199,7 @@ func QueryKeywordFromDB(db *sql.DB, sql string) []string {
 }
 
 func GetJumperHostsInfo(db *sql.DB, jmphost string) QueryJumperHosts {
-	sql := fmt.Sprintf("select jmphost, jmpuser,jmppass,jmpport from %s where jmphost='%s';", JumpHostsTableName, jmphost)
+	sql := fmt.Sprintf("select jmphost, jmpuser,jmppass,jmpkey,jmpport from %s where jmphost='%s';", JumpHostsTableName, jmphost)
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Fatal(err)
@@ -205,7 +208,7 @@ func GetJumperHostsInfo(db *sql.DB, jmphost string) QueryJumperHosts {
 
 	var result QueryJumperHosts
 	for rows.Next() {
-		rows.Scan(&result.JmpHost, &result.JmpUser, &result.JmpPass, &result.JmpPort)
+		rows.Scan(&result.JmpHost, &result.JmpUser, &result.JmpPass, &result.JmpKey, &result.JmpPort)
 	}
 
 	return result
