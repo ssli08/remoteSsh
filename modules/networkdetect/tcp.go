@@ -89,8 +89,8 @@ func (tcp *TCPHeader) Marshal() []byte {
 	binary.Write(buf, binary.BigEndian, tcp.SeqNum)
 	binary.Write(buf, binary.BigEndian, tcp.AckNum)
 
-	var mix uint16
-	mix = uint16(tcp.DataOffset)<<12 | // top 4 bits
+	// var mix uint16
+	mix := uint16(tcp.DataOffset)<<12 | // top 4 bits
 		uint16(tcp.Reserved)<<9 | // 3 bits
 		uint16(tcp.ECN)<<6 | // 3 bits
 		uint16(tcp.Ctrl) // bottom 6 bits

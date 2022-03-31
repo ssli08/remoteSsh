@@ -62,6 +62,7 @@ var (
 		`, InstanceTableName)
 
 	sqlite3InitSSHKeyTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (
+		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 		SSH_USER VARCHAR(10) NOT NULL,
 		SSH_PASSWORD VARCHAR(200),
 		SSH_PORT VARCHAR(20),
@@ -73,12 +74,13 @@ var (
 	`, SSHKeyTableName)
 
 	sqlite3InitJumperHostsTable = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" (
+		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 		jmphost VARCHAR(25) NOT NULL,
 		jmpuser VARCHAR(25) NOT NULL,
 		jmppass VARCHAR(200),
 		jmpkey TEXT,
 		jmpport VARCHAR(25) NOT NULL DEFAULT 26222,
-		latency INT NOT NULL DEFAULT 0,
+		latency INTEGER NOT NULL DEFAULT 0,
 		insert_time  NOT NULL DEFAULT CURRENT_TIMESTAMP);
 	`, JumpHostsTableName)
 

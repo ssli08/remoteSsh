@@ -371,7 +371,7 @@ func UpdateJumperHostLatency(db *sql.DB, port uint16) {
 				latency = tcpLatency
 			} */
 			fmt.Printf("RTT time for %s is %s \n", modules.Green(jmphost), modules.Green(latency))
-			sql := fmt.Sprintf("update jumperHosts set latency='%s' where jmphost='%s'", latency, jmphost)
+			sql := fmt.Sprintf("update jumperHosts set latency='%s' where jmphost='%s'", strings.Split(latency.String(), ".")[0], jmphost)
 			if err := database.DBExecute(db, sql); err != nil {
 				log.Fatal(err)
 			}
