@@ -487,7 +487,7 @@ func (c *Connect) createClient(host, user, password, privateKey, proj string) (e
 
 	// Create *ssh.Client
 	c.Client = ssh.NewClient(sshCon, channel, req)
-	return
+	return nil
 }
 
 // Shell .
