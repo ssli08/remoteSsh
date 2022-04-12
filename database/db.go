@@ -36,11 +36,12 @@ type QueryJumperHosts struct {
 }
 
 const (
-	queryTimeout       = 5 * time.Second
-	DatabaseName       = "sshServers"
-	InstanceTableName  = "instances"
-	SSHKeyTableName    = "sshkeys"
-	JumpHostsTableName = "jumperHosts"
+	queryTimeout         = 5 * time.Second
+	DatabaseName         = "sshServers"
+	InstanceTableName    = "instances"
+	SSHKeyTableName      = "sshkeys"
+	JumpHostsTableName   = "jumperHosts"
+	AccessTokenTableName = "accessToken"
 )
 
 var (
@@ -140,9 +141,21 @@ var (
 		PRIMARY KEY  (id)) ENGINE = InnoDB;
 	`, strings.Join([]string{DatabaseName, JumpHostsTableName}, "."))
 
+	mySQLInitAccessTokenTable = fmt.Sprintf(`
+	CREATE TABLE IF NOT EXISTS %s (
+		id BIGINT(20) NOT NULL auto_increment,
+  		username VARCHAR(20) NOT NULL,
+  		rolename VARCHAR(20) NOT NULL,
+  		project VARCHAR(20)  NOT NULL,
+		ipmac VARCHAR(20) NOT NULL,
+  		token VARCHAR(500)  NOT NULL,
+		PRIMARY KEY  (id)) ENGINE = InnoDB;
+	`, strings.Join([]string{DatabaseName, AccessTokenTableName}, "."))
+
 	// default database config file, hidden in `$HOME` directoy
-	// DBConFile = ".db.ini"
-	DBConFile = path.Join(os.Getenv("HOME"), ".db.ini")
+	// DBConFile = path.Join(os.Getenv("HOME"), ".db.ini")
+	p, _      = os.UserHomeDir()
+	DBConFile = path.Join(p, ".db.ini")
 )
 
 func QueryInstancesFromDB(db *sql.DB, project, role string) []map[string]string {
@@ -312,11 +325,14 @@ func MySQLConnInit(dbHost, dbport, user, pass string) error {
 	if err := DBExecute(db, mySQLInitJumperHostsTable); err != nil {
 		return err
 	}
+	if err := DBExecute(db, mySQLInitAccessTokenTable); err != nil {
+		return err
+	}
 	// initial mysql connection info and save to local file
 	return func(dbhost, dbport, dbuser, dbpass string) error {
 		data := RSSHConfig{DBHost: dbhost, DBPort: dbport, DBUser: dbuser, DBPass: dbpass, DBName: "", VPSKey: ""}
 
-		f, err := os.OpenFile(DBConFile, os.O_WRONLY, 0755)
+		f, err := os.OpenFile(DBConFile, os.O_WRONLY|os.O_TRUNC, 0755)
 		if os.IsNotExist(err) {
 			f, _ = os.OpenFile(DBConFile, os.O_CREATE|os.O_WRONLY, 0755)
 		}
