@@ -51,9 +51,6 @@ var importInstanceFromAPICmd = &cobra.Command{
 
 			// modules.ImportAWSInstancesToDB(db, project, region)
 			modules.UpdateInstanceListsInDB(db, project, region)
-			if project == "gdms" {
-				modules.ImportVPSInstancesToDB(db)
-			}
 		} else {
 			log.Fatal(err)
 		}
@@ -110,7 +107,7 @@ var importSSHKeysCmd = &cobra.Command{
 
 		if db, err := database.GetDBConnInfo(database.DatabaseName); err == nil {
 			defer db.Close()
-			modules.ImportSSHAuthentication(db, keyFile, sshUser, sshPort, sshPassword, modules.Passcode)
+			modules.ImportSSHAuthentication(db, keyFile, project, sshUser, sshPort, sshPassword, modules.Passcode)
 		} else {
 			log.Fatal(err)
 		}
@@ -193,7 +190,9 @@ func init() {
 	importInstanceFromFileCmd.Flags().StringVarP(&instanceFile, "file", "f", "", "import instance from file")
 
 	// import ssh keys cmd args
+
 	importSSHKeysCmd.Flags().StringVarP(&keyFile, "keyfile", "k", "", "import this keyFile to DB")
+	importSSHKeysCmd.Flags().StringVar(&project, "pj", "", "import project's key")
 	importSSHKeysCmd.Flags().StringVarP(&sshUser, "sshUser", "s", "", "import ssh user to DB")
 	importSSHKeysCmd.Flags().StringVarP(&sshPort, "sshPort", "p", "26222", "import ssh port to DB")
 	importSSHKeysCmd.Flags().StringVarP(&sshPassword, "sshpasswd", "P", "", "import this ssh password to DB")

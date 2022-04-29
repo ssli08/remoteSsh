@@ -104,18 +104,18 @@ var awsRegions = map[string]string{
 // get instances hosted in https://my.vultr.com/
 func GetVPSInstances() ([]instanceInfo, error) {
 	// api url https://www.vultr.com/api/#operation/list-instances
+	var rssc database.RSSHConfig
 
 	f, err := os.Open(database.DBConFile)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	d := json.NewDecoder(f)
-	var rssc database.RSSHConfig
 	if err := d.Decode(&rssc); err != nil {
-		log.Fatal("decode failed with error ", err)
+		return nil, fmt.Errorf("failed to decode %s with error %s", f.Name(), err)
 	}
 	if rssc.VPSKey == "" {
-		log.Fatalf("no VPSKey settings found in %s", f.Name())
+		return nil, fmt.Errorf("no VPSKey settings found in %s", f.Name())
 	}
 
 	os.Setenv("VPSKey", rssc.VPSKey)
@@ -151,34 +151,42 @@ func GetVPSInstances() ([]instanceInfo, error) {
 }
 
 // import instances hosted in https://my.vultr.com/
-func ImportVPSInstancesToDB(db *sql.DB) {
+func ImportVPSInstancesToDB(db *sql.DB) error {
 	// defer db.Close()
 
 	var sql string
 	res, err := GetVPSInstances()
 	if err != nil {
-		log.Fatal("get vps instances info failed with error ", err)
+		return err
 	}
 
 	for _, instance := range res {
 		if !strings.Contains(strings.ToLower(instance.Label), "test") {
 
 			if strings.Contains(strings.ToLower(instance.Label), "ssh") {
-				sql = fmt.Sprintf(`INSERT INTO %s
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
-				values 
-				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "ssh", "vps")
+				sql = fmt.Sprintf(`INSERT INTO %s (INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
+				values ('%s','%s','%s','%s','%s','%s')`,
+					database.InstanceTableName,
+					instance.Label,
+					instance.PublicIP,
+					instance.PrivateIP,
+					instance.Region, "ssh", "vps")
 			} else if strings.Contains(strings.ToLower(instance.Label), "turn") {
-				sql = fmt.Sprintf(`INSERT INTO %s 
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
-				values 
-				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "turn", "vps")
+				sql = fmt.Sprintf(`INSERT INTO %s (INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
+				values ('%s','%s','%s','%s','%s','%s')`,
+					database.InstanceTableName,
+					instance.Label,
+					instance.PublicIP,
+					instance.PrivateIP,
+					instance.Region, "turn", "vps")
 			} else {
-				// continue
-				sql = fmt.Sprintf(`INSERT INTO %s 
-				(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
-				values 
-				('%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance.Label, instance.PublicIP, instance.PrivateIP, instance.Region, "other", "vps")
+				sql = fmt.Sprintf(`INSERT INTO %s (INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP, REGION, PROJECT,PLATFORM) 
+				values ('%s','%s','%s','%s','%s','%s')`,
+					database.InstanceTableName,
+					instance.Label,
+					instance.PublicIP,
+					instance.PrivateIP,
+					instance.Region, "other", "vps")
 			}
 
 			if database.IsRecordExist(db, instance.PublicIP) {
@@ -187,11 +195,12 @@ func ImportVPSInstancesToDB(db *sql.DB) {
 			}
 
 			if err := database.DBExecute(db, sql); err != nil {
-				log.Fatal(err)
+				return fmt.Errorf("failed to import instances from VPS with error %s", err)
 			}
 		}
 	}
 	log.Println("import VPS instances to DB successfully.")
+	return nil
 }
 
 func GetAWSInstances(project, region string) ([]map[string]string, error) {
@@ -254,45 +263,62 @@ func newEC2Client(project, region string) (*ec2.Client, error) {
 }
 
 // import instances hosted in Amazon to db
-func ImportAWSInstancesToDB(db *sql.DB, project, region string) {
-	// defer db.Close()
-
+func ImportAWSInstancesToDB(db *sql.DB, project, region string) error {
 	res, err := GetAWSInstances(project, region)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	for _, instance := range res {
-		sql := fmt.Sprintf(`INSERT INTO %s 
-		(INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP,INSTANCE_TYPE,INSTANCE_ID, REGION, PROJECT,PLATFORM) 
-		values 
-		('%s','%s','%s','%s','%s','%s','%s','%s')`, database.InstanceTableName, instance["Name"], instance["PublicIP"], instance["PrivateIP"], instance["InstanceType"], instance["InstanceID"], instance["Region"], project, "aws")
+		sql := fmt.Sprintf(`INSERT INTO %s (INSTANCE_NAME, PUBLIC_IP, PRIVATE_IP,INSTANCE_TYPE,INSTANCE_ID, REGION, PROJECT,PLATFORM) 
+		values ('%s','%s','%s','%s','%s','%s','%s','%s')`,
+			database.InstanceTableName,
+			instance["Name"],
+			instance["PublicIP"],
+			instance["PrivateIP"],
+			instance["InstanceType"],
+			instance["InstanceID"],
+			instance["Region"],
+			project, "aws")
 
-		// if database.IsRecordExist(db, instance["PublicIP"]) {
-		// 	log.Printf("%s is Exist in db, update its instance name", instance["PublicIP"])
-		// 	sql = fmt.Sprintf("UPDATE instances SET INSTANCE_NAME = '%s' where PUBLIC_IP ='%s';", instance["Name"], instance["PublicIP"])
-		// }
 		if err := database.DBExecute(db, sql); err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("failed to import instances from AWS with error %s", err)
 		}
 	}
 	log.Println("import aws instance to DB successfully.")
+	return nil
 }
 
 // update instance list stored in db
 func UpdateInstanceListsInDB(db *sql.DB, project, region string) {
-	sql := fmt.Sprintf("DELETE FROM %s  WHERE PROJECT = '%s' and REGION = '%s';", database.InstanceTableName, project, awsRegions[region])
-	if err := database.DBExecute(db, sql); err != nil {
-		log.Fatal(err)
+
+	// update ssh instances placed in VPS if update gdms's instances
+	switch project {
+	case "ssh", "turn":
+		sql := fmt.Sprintf("DELETE FROM %s  WHERE PROJECT = '%s';", database.InstanceTableName, project)
+		if err := database.DBExecute(db, sql); err != nil {
+			log.Fatal(err)
+		}
+		if err := ImportVPSInstancesToDB(db); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		sql := fmt.Sprintf("DELETE FROM %s  WHERE PROJECT = '%s' and REGION = '%s';", database.InstanceTableName, project, awsRegions[region])
+		if err := database.DBExecute(db, sql); err != nil {
+			log.Fatal(err)
+		}
+		if err := ImportAWSInstancesToDB(db, project, region); err != nil {
+			log.Fatal(err)
+		}
 	}
-	ImportAWSInstancesToDB(db, project, region)
-	ImportVPSInstancesToDB(db)
+
 }
 
 // import ssh key to specified db and use `passphrase` as key to encrypt ssh key content
 // encrypt program:
 // [string --> encrypted --> base64 encode --> db]
-func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_password, passphrase string) {
-	var ePass, eKey, project, privateKeyName string
+func ImportSSHAuthentication(db *sql.DB, keyFile, project, ssh_user, ssh_port, ssh_password, passphrase string) {
+	// var ePass, eKey, project, privateKeyName string
+	var ePass, eKey, privateKeyName string
 	var err error
 	// encrypted ssh password
 	if ssh_password != "" {
@@ -301,6 +327,7 @@ func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_passwo
 			log.Fatal(err)
 		}
 	}
+
 	// encrypted key
 	if keyFile != "" {
 		buf, err := os.ReadFile(keyFile)
@@ -311,7 +338,10 @@ func ImportSSHAuthentication(db *sql.DB, keyFile, ssh_user, ssh_port, ssh_passwo
 		if err != nil {
 			log.Fatal(err)
 		}
-		project = strings.TrimSuffix(path.Base(keyFile), ".pem")
+		if project == "" {
+			project = strings.TrimSuffix(path.Base(keyFile), ".pem")
+		}
+
 		privateKeyName = path.Base(keyFile)
 	}
 
