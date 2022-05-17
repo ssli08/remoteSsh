@@ -55,7 +55,7 @@ func init() {
 	// rootCmd.Flags().StringVar(&jmpPort, "jmpPort", "26222", "jump host ssh user")
 
 	rootCmd.Flags().StringVarP(&rmtHost, "rh", "r", "", "remote host to be connected")
-	rootCmd.Flags().StringVar(&rmtUser, "ru", "", "remote host ssh user")
+	rootCmd.Flags().StringVar(&rmtUser, "ru", "ec2-user", "remote host ssh user")
 	rootCmd.Flags().StringVar(&rmtPass, "rp", "", "remote host ssh password")
 	rootCmd.Flags().StringVar(&rmtPort, "rport", "26222", "remote host ssh port")
 

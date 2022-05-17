@@ -13,17 +13,18 @@ import (
 )
 
 // PortForward .
-func PortForward(jumpUser, jumpPass, jumpPort, jumperHost, localAddr, rmtAddr, rmtPort string) {
+func PortForward(sshUser, sshPass, sshPort, sshHost, localAddr, rmtAddr, rmtPort string) {
 	// Build SSH client configuration
-	cfg, err := makeSSHConfig(jumpUser, jumpPass)
+	cfg, err := makeSSHConfig(sshUser, sshPass)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// Establish connection with SSH server
-	conn, err := ssh.Dial("tcp", net.JoinHostPort(jumperHost, jumpPort), cfg)
+	conn, err := ssh.Dial("tcp", net.JoinHostPort(sshHost, sshPort), cfg)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 	defer conn.Close()
 
@@ -36,16 +37,17 @@ func PortForward(jumpUser, jumpPass, jumpPort, jumperHost, localAddr, rmtAddr, r
 	defer local.Close()
 
 	// Handle incoming connections
+
 	for {
 		remote, err := conn.Dial("tcp", net.JoinHostPort(rmtAddr, rmtPort))
 		if err != nil {
 			log.Fatalf("connect remote %s failed with err: %s .", net.JoinHostPort(rmtAddr, rmtPort), err)
 		}
-
 		client, err := local.Accept()
 		if err != nil {
 			log.Fatalln(err)
 		}
+		fmt.Printf("get connection from %s\n", client.RemoteAddr().String())
 
 		go handleClient(client, remote)
 	}

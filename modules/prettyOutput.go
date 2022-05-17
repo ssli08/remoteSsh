@@ -3,6 +3,11 @@ package modules
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -39,4 +44,18 @@ func JsonOutput(data interface{}) (string, error) {
 		return "", fmt.Errorf("json data output error %s", err)
 	}
 	return string(res), nil
+}
+func GetInputPassword() (string, error) {
+	// reader := bufio.NewReader(os.Stdin)
+	// fmt.Print("Enter Username: ")
+	// username, _ := reader.ReadString('\n')
+
+	fmt.Print("Enter Password: ")
+	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println()
+	// return strings.TrimSpace(username), strings.TrimSpace(password)
+	return strings.TrimSpace(string(bytePassword)), nil
 }

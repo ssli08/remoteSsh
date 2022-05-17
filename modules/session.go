@@ -139,10 +139,13 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 			// rmtPass = ""
 			privateKey = sshinfo.PrivateKeyContent
 		default:
-			fmt.Printf("no ssh_key/password record found for %s (PROJECT %s) in DB `sshkeys`, use your input pass instead\n", rmtHost, proj)
+			fmt.Printf("no `privateKey_name` with suffix .pem|.pass record found in DB `sshkeys` for %s (PROJECT %s), use your input pass instead\n", rmtHost, proj)
+			rmtPass, err = GetInputPassword()
+			if err != nil {
+				log.Fatal(err)
+			}
 			// return
 		}
-
 		// if rmtHost != "" {
 		// 	makeProxyHost(
 		// 		res.JmpHost,
