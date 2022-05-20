@@ -385,10 +385,14 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, rmtHost, rmtPort,
 			}
 			for range hostinfo {
 				res := <-ch
-				fmt.Printf("{\n\tHost: %s \n", Green(strings.Join([]string{res.hostname, res.ip}, "-")))
+				fmt.Printf("{\n\tHost: %s \n", Green(strings.Join([]string{res.hostname, res.ip}, "|")))
 				if res.stde.String() == "" {
 					fmt.Printf("\tStatus: %s\n", Green("SUCCESS"))
-					fmt.Printf("\tResult: %20s", res.stdo.String())
+					// fmt.Printf("\tResult: %20s", res.stdo.String())
+					fmt.Printf("\tResult: \n")
+					for _, k := range strings.Split(res.stdo.String(), "\n") {
+						fmt.Printf("\t\t%s\n", k)
+					}
 				} else {
 					fmt.Printf("\tStatus: %s\n", Red("FAILED"))
 					fmt.Printf("\tResult: %s\n", res.stde.String())
