@@ -84,7 +84,7 @@ const (
 )
 
 // InitSession session
-func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtPort, rmtUser, rmtPass string, cmdlist, fileList []string) {
+func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtPort, rmtUser string, cmdlist, fileList []string) {
 
 	// Ctrl^C  handling in ssh session
 	// https://unix.stackexchange.com/questions/102061/ctrl-c-handling-in-ssh-session
@@ -127,7 +127,7 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 			return
 		}
 
-		var privateKey string
+		var privateKey, rmtPass string
 		sshinfo := GetSSHKey(db, proj, Passcode)
 		switch filepath.Ext(sshinfo.PrivateKeyName) {
 		case ".pass":
@@ -193,6 +193,10 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 			return
 		}
 		// makeDirectSSH(res.JmpHost, res.JmpUser, res.JmpPass, res.JmpPort, proj, destPath, fcopy, fileList)
+		rmtPass, err := GetInputPassword()
+		if err != nil {
+			log.Fatal(err)
+		}
 		makeDirectSSH(rmtHost, rmtUser, rmtPass, "", rmtPort, proj, destPath, fcopy, fileList)
 	}
 	// network connection quality check
@@ -291,10 +295,11 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, proj, destPath st
 	// make client
 	jumpHost := net.JoinHostPort(jmpHost, jmpPort)
 	sshConfig := InitSSHClientConfig(jmpUser, jmpPass, jmpkey, proj, 20)
-	client, err := ssh.Dial("tcp", jumpHost, &sshConfig)
 
+	client, err := ssh.Dial("tcp", jumpHost, &sshConfig)
 	if err != nil {
-		log.Fatalf("dial %s failed with error %s", jmpHost, err.Error())
+		fmt.Printf("dial %s failed %v\n", jmpHost, err)
+		os.Exit(1)
 	}
 	defer client.Close()
 	// c := Connect{Client: client}

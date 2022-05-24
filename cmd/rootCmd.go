@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	project, role                      string
-	rmtHost, rmtUser, rmtPass, rmtPort string
+	project, role string
+	// rmtHost, rmtUser, rmtPass, rmtPort string
+	rmtHost, rmtUser, rmtPort string
 
 	print    bool
 	fcopy    bool   // file copy
@@ -31,7 +32,7 @@ var rootCmd = cobra.Command{
 		// 	return
 		// }
 		// fmt.Println("args:", args, len(args))
-		modules.InitSession(print, fcopy, command, project, role, destPath, rmtHost, rmtPort, rmtUser, rmtPass, args, args)
+		modules.InitSession(print, fcopy, command, project, role, destPath, rmtHost, rmtPort, rmtUser, args, args)
 	},
 }
 
@@ -56,7 +57,7 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&rmtHost, "rh", "r", "", "remote host to be connected")
 	rootCmd.Flags().StringVar(&rmtUser, "ru", "ec2-user", "remote host ssh user")
-	rootCmd.Flags().StringVar(&rmtPass, "rp", "", "remote host ssh password")
+	// rootCmd.Flags().StringVar(&rmtPass, "rp", "", "remote host ssh password (leave blank if no pass)")
 	rootCmd.Flags().StringVar(&rmtPort, "rport", "26222", "remote host ssh port")
 
 	// directly connect real instance

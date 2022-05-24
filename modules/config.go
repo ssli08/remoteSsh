@@ -62,8 +62,8 @@ func InitSSHClientConfig(user, password, privateKey, proj string, timeout int) s
 			err := nhkc(host, remote, pubKey)
 			if errors.As(err, &keyErr) && len(keyErr.Want) > 0 {
 				// log.Printf("WARNING: %v is not a key of %s, either a MiTM attack or %s has reconfigured the host pub key.\n", hostKeyString(pubKey), host, host)
-				log.Printf("@@@@@@     WARNING: REMOTE HOST [%s] IDENTIFICATION HAS CHANGED!     @@@@@", host)
-				log.Printf("remove %s with:\n ssh-keygen -f '%s' -R '[%s]:26222' ", host, knownHostFile, strings.Split(host, ":")[0])
+				fmt.Printf("\n@@@@@@ WARNING: REMOTE HOST [%s] IDENTIFICATION HAS CHANGED! @@@@@\n", host)
+				fmt.Printf("remove %s with:\n\t ssh-keygen -f '%s' -R '%s' \n", host, knownHostFile, strings.Split(host, ":")[0])
 				return keyErr
 			} else if errors.As(err, &keyErr) && len(keyErr.Want) == 0 {
 				log.Printf("WARNING: %s is not trusted, adding this key: %q to known_hosts file.", host, hostKeyString(pubKey))
