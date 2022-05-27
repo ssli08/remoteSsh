@@ -82,7 +82,7 @@ func (f *FileTransfer) transfer(rs Resource, p *mpb.Progress) Resource {
 	}
 	rf, err := sc.Create(targetFileName)
 	if err != nil {
-		log.Fatalf("create file %s failed on server %s", targetFileName, f.Conn.RemoteAddr())
+		log.Fatalf("create file %s failed on server %s %s", targetFileName, f.Conn.RemoteAddr(), err)
 	}
 	defer rf.Close()
 
