@@ -406,7 +406,7 @@ func ExportTableTOCSVFile(db *sql.DB, tablename string) {
 		var s []string
 
 		//Add the contents of each line to scanArgs, and also to values
-		err = rows.Scan(scanArgs...)
+		err = rows.Scan(scanArgs)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
