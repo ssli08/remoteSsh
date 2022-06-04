@@ -69,6 +69,14 @@ type result struct {
 	Meta      interface{}    `json:"meta"`
 }
 
+type SecurityGroupInfo struct {
+	SGName string
+	SGID   string
+	SGDesc string
+	// SGCidrs []types.IpPermission
+	SGCidrs []string
+}
+
 const (
 	vpsInstanceURL       = "https://api.vultr.com/v2/instances"
 	vpsInstanceRegionURL = "https://api.vultr.com/v2/regions"
@@ -233,6 +241,7 @@ func GetAWSInstances(project, region string) ([]map[string]string, error) {
 				tagIP["InstanceType"] = string(instance.InstanceType)
 				tagIP["InstanceID"] = aws.ToString(instance.InstanceId)
 				tagIP["Region"] = awsRegions[region]
+				// tagIP["SecurityGroupID"] = aws.ToString(instance.SecurityGroups[0].GroupId)
 
 			}
 			result = append(result, tagIP)
@@ -436,4 +445,86 @@ func ImportJumperHosts(db *sql.DB, jumpHost, jumpUser, jumpPass, jumpKeyFile, ju
 	if err := database.DBExecute(db, sql); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// add spcified port to aws security-group so you can access aws resources
+// revoke the rule after finishing the ssh connection
+func AddSpcifiedPortToAWSSGRP(client *ec2.Client, CidrIpv4, grpid string, port int32) {
+	defer func(client *ec2.Client) {
+		rks := ec2.RevokeSecurityGroupIngressInput{
+			CidrIp:   aws.String(CidrIpv4),
+			GroupId:  aws.String(grpid),
+			FromPort: aws.Int32(port),
+			ToPort:   aws.Int32(port)}
+		output, err := client.RevokeSecurityGroupIngress(context.TODO(), &rks)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if aws.ToBool(output.Return) {
+			log.Printf("succeed to revoke SecurityGroup rules for %s on port %d\n", CidrIpv4, port)
+		}
+	}(client)
+
+	sgrr := types.SecurityGroupRuleRequest{
+		CidrIpv4: aws.String(CidrIpv4),
+		// CidrIpv6: ,
+		Description: aws.String("remoteSsh auto add"),
+		FromPort:    aws.Int32(port),
+		IpProtocol:  aws.String("tcp"),
+		ToPort:      aws.Int32(port),
+	}
+	ms := ec2.ModifySecurityGroupRulesInput{
+		GroupId: aws.String(grpid),
+		SecurityGroupRules: []types.SecurityGroupRuleUpdate{
+			{
+				SecurityGroupRule: &sgrr,
+				// SecurityGroupRuleId: aws.String(sgid),
+			},
+		},
+	}
+	output, err := client.ModifySecurityGroupRules(context.TODO(), &ms)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if aws.ToBool(output.Return) {
+		log.Printf("succeed to add SecurityGroup rule for %s on port %d\n", CidrIpv4, port)
+	}
+}
+
+// get AWS SecurityGroup info by SecurityGroup ID
+func GetAWSSecuirtyGroupInfo(client *ec2.Client, grpid string) SecurityGroupInfo {
+	sg := SecurityGroupInfo{}
+
+	sgi := ec2.DescribeSecurityGroupsInput{Filters: []types.Filter{{Name: aws.String("group-id"), Values: []string{grpid}}}}
+	output, err := client.DescribeSecurityGroups(context.TODO(), &sgi)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println(JsonOutput(output.SecurityGroups))
+	for _, k := range output.SecurityGroups {
+		sg.SGID = aws.ToString(k.GroupId)
+		sg.SGName = aws.ToString(k.GroupName)
+		sg.SGDesc = aws.ToString(k.Description)
+		// fmt.Println(aws.ToString(k.GroupName), aws.ToString(k.GroupId), aws.ToString(k.Description))
+		for _, t := range k.IpPermissions {
+			// fmt.Printf("\t%s\t%d\n", aws.ToString(t.IpProtocol), aws.ToInt32(t.FromPort))
+			for _, ip := range t.IpRanges {
+				// fmt.Printf("\t\t%s\n", aws.ToString(ip.CidrIp))
+				sg.SGCidrs = append(sg.SGCidrs, aws.ToString(ip.CidrIp))
+			}
+		}
+		// sg.SGCidrs = k.IpPermissions
+
+	}
+
+	/* sgr := ec2.DescribeSecurityGroupRulesInput{}
+	output, err := client.DescribeSecurityGroupRules(context.TODO(), &sgr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, k := range output.SecurityGroupRules {
+		fmt.Println(aws.ToString(k.CidrIpv4), aws.ToString(k.Description), aws.ToString(k.GroupId), aws.ToString(k.IpProtocol), aws.ToString(k.SecurityGroupRuleId),
+			aws.ToInt32(k.FromPort))
+	} */
+	return sg
 }
