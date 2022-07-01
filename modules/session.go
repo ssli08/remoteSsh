@@ -134,7 +134,7 @@ func InitSession(print, fcopy, command bool, proj, role, destPath, rmtHost, rmtP
 			rmtUser = sshinfo.SSHUser
 			// privateKey = ""
 			rmtPass = sshinfo.PrivateKeyContent
-		case ".pem":
+		case ".pem", ".key":
 			rmtUser = sshinfo.SSHUser
 			// rmtPass = ""
 			privateKey = sshinfo.PrivateKeyContent
