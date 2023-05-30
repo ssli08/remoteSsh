@@ -63,7 +63,7 @@ func InitSSHClientConfig(user, password, privateKey, proj string, timeout int) s
 			if errors.As(err, &keyErr) && len(keyErr.Want) > 0 {
 				// log.Printf("WARNING: %v is not a key of %s, either a MiTM attack or %s has reconfigured the host pub key.\n", hostKeyString(pubKey), host, host)
 				fmt.Printf("\n@@@@@@ WARNING: REMOTE HOST [%s] IDENTIFICATION HAS CHANGED! @@@@@\n", host)
-				// ssh-keygen -f "/home/rjyao/.ssh/known_hosts" -R "[54.202.245.21]:26222"
+				// ssh-keygen -f "/home/rjyao/.ssh/known_hosts" -R "[2.2.2.2]:26222"
 				fmt.Printf("remove %s with:\n\t ssh-keygen -f '%s' -R '[%s]:%s' \n", host, knownHostFile, strings.Split(host, ":")[0], strings.Split(host, ":")[1])
 				return keyErr
 			} else if errors.As(err, &keyErr) && len(keyErr.Want) == 0 {
