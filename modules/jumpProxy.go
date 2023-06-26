@@ -27,9 +27,9 @@ func init() {
 
 	flag.StringVar(&remoteHost, "remoteHost", "", "remote server ip for ssh connection")
 	flag.StringVar(&remotePort, "remotePort", "26222", "port of remote host for ssh connetion")
-	flag.StringVar(&remotePass, "remotePass", "ec2@gs.com", "password of remote host for ssh connetion")
+	flag.StringVar(&remotePass, "remotePass", "ec2com", "password of remote host for ssh connetion")
 
-	flag.StringVar(&jumperHost, "jumperHost", "52.83.235.118", "jumper host for ssh connection")
+	flag.StringVar(&jumperHost, "jumperHost", "1.1.1.1", "jumper host for ssh connection")
 	flag.StringVar(&jumperPort, "jumperPort", "26222", "port of jumper host for ssh connection")
 
 	flag.StringVar(&user, "sshUser", "ec2-user", "user for ssh connection")
