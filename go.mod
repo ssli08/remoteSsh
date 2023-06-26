@@ -51,6 +51,7 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/smartystreets/goconvey v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
 	golang.org/x/sys v0.9.0 // indirect

@@ -35,24 +35,18 @@ type DescribeCapacityReservationFleetsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters.
-	//
-	// * state - The state of the Fleet (submitted | modifying |
-	// active | partially_fulfilled | expiring | expired | cancelling | cancelled |
-	// failed).
-	//
-	// * instance-match-criteria - The instance matching criteria for the
-	// Fleet. Only open is supported.
-	//
-	// * tenancy - The tenancy of the Fleet (default |
-	// dedicated).
-	//
-	// * allocation-strategy - The allocation strategy used by the Fleet.
-	// Only prioritized is supported.
+	//   - state - The state of the Fleet ( submitted | modifying | active |
+	//   partially_fulfilled | expiring | expired | cancelling | cancelled | failed ).
+	//   - instance-match-criteria - The instance matching criteria for the Fleet. Only
+	//   open is supported.
+	//   - tenancy - The tenancy of the Fleet ( default | dedicated ).
+	//   - allocation-strategy - The allocation strategy used by the Fleet. Only
+	//   prioritized is supported.
 	Filters []types.Filter
 
 	// The maximum number of results to return for the request in a single page. The
@@ -130,6 +124,9 @@ func (c *Client) addOperationDescribeCapacityReservationFleetsMiddlewares(stack 
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeCapacityReservationFleets(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -195,12 +192,13 @@ func NewDescribeCapacityReservationFleetsPaginator(client DescribeCapacityReserv
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeCapacityReservationFleetsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeCapacityReservationFleets page.
@@ -227,7 +225,10 @@ func (p *DescribeCapacityReservationFleetsPaginator) NextPage(ctx context.Contex
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

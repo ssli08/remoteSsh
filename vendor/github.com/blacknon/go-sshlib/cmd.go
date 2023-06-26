@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Blacknon. All rights reserved.
+// Copyright (c) 2021 Blacknon. All rights reserved.
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Cmd connect and run command over ssh.
+// Command connect and run command over ssh.
 // Output data is processed by channel because it is executed in parallel. If specification is troublesome, it is good to generate and process session from ssh package.
 func (c *Connect) Command(command string) (err error) {
 	// create session
@@ -35,7 +35,8 @@ func (c *Connect) Command(command string) (err error) {
 		w, _ := c.Session.StdinPipe()
 		go io.Copy(w, c.Stdin)
 	} else {
-		c.Session.Stdin = os.Stdin
+		stdin := GetStdin()
+		c.Session.Stdin = stdin
 	}
 
 	if c.Stdout != nil {
