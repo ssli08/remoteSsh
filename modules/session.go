@@ -308,7 +308,8 @@ func makeDirectSSH(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, proj, destPath st
 		// make session
 		session, err := client.NewSession()
 		if err != nil {
-			log.Fatal("new session failed with error: ", err)
+			fmt.Printf("new session failed with error: %s\n", err)
+			os.Exit(1)
 		}
 		defer session.Close()
 		// c.xShell(session)
@@ -325,7 +326,8 @@ func makeProxyHost(jmpHost, jmpUser, jmpPass, jmpkey, jmpPort, rmtHost, rmtPort,
 	proxyConn := Connect{}
 	err := proxyConn.createClient(jumpHost, jmpUser, jmpPass, jmpkey, proj)
 	if err != nil {
-		log.Fatal("failed to connect jumper host with error: ", err)
+		fmt.Printf("failed to connect jumper host with error: %s\n", err)
+		os.Exit(1)
 	}
 	// target connnect
 	targetConn := Connect{

@@ -29,7 +29,7 @@ func ForSingnalUsage() {
 // program if it receives an interrupt from the OS. We then handle this by calling
 // our clean up procedure and exiting the program.
 func SetupCloseHandler() {
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
@@ -47,7 +47,7 @@ func DeleteFiles() {
 	fmt.Println("- Good bye!")
 }
 
-//CreateFile Create a file so we have something to clean up when we close our program.
+// CreateFile Create a file so we have something to clean up when we close our program.
 func CreateFile() {
 	fmt.Println("- Create Our Example File")
 	file, _ := os.Create(FileNameExample)
