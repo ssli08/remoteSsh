@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -67,7 +66,7 @@ func InitSSHClientConfig(user, password, privateKey, proj string, timeout int) s
 				return keyErr
 			} else if errors.As(err, &keyErr) && len(keyErr.Want) == 0 {
 				log.Printf("WARNING: %s is not trusted, adding this key: %q to known_hosts file.", host, hostKeyString(pubKey))
-				addToKnownHostsFile(host, remote, pubKey)
+				addToKnownHostsFile(remote, pubKey)
 				return nil
 			}
 			// log.Printf("Pub key %s exists for %s.", hostKeyString(pubKey), host)
@@ -94,7 +93,7 @@ func ParseSSHKeys() []byte {
 	// auto_generation.pem
 	homePath := os.Getenv("HOME")
 
-	buf, err := ioutil.ReadFile(homePath + "/.ssh/id_rsa")
+	buf, err := os.ReadFile(homePath + "/.ssh/id_rsa")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -122,7 +121,7 @@ func newHostKeyCallback() ssh.HostKeyCallback {
 }
 
 // add remote host host publicKey to knonw_hosts file
-func addToKnownHostsFile(host string, remote net.Addr, pubKey ssh.PublicKey) error {
+func addToKnownHostsFile(remote net.Addr, pubKey ssh.PublicKey) error {
 	f, _ := os.OpenFile(knownHostFile, os.O_APPEND|os.O_WRONLY, 0644)
 	defer f.Close()
 
